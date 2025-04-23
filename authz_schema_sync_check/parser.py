@@ -3,12 +3,13 @@ Schema parser using tree-sitter with the tree-sitter-spicedb grammar.
 """
 
 from pathlib import Path
-from tree_sitter import Parser, Language
+from typing import Any, cast
+from tree_sitter import Parser, Language, Node
 
 # Global variable to cache the language
 _SPICEDB_LANGUAGE = None
 
-def get_spicedb_language():
+def get_spicedb_language() -> Language:
     """
     Get the SpiceDB language.
     
@@ -73,7 +74,7 @@ class SchemaParser:
         except ValueError as e:
             raise ValueError(f"Failed to initialize parser: {e}")
         
-    def parse(self):
+    def parse(self) -> Any:
         """
         Parse the schema file and return the syntax tree.
         
@@ -86,7 +87,7 @@ class SchemaParser:
         tree = self.parser.parse(schema_content)
         return tree
     
-    def get_object_types(self):
+    def get_object_types(self) -> list[str]:
         """
         Extract all object types (definitions) from the schema.
         
@@ -107,7 +108,7 @@ class SchemaParser:
         
         return object_types
     
-    def get_relations(self, object_type=None):
+    def get_relations(self, object_type: str | None = None) -> dict[str, list[str]] | list[str]:
         """
         Extract all relations from the schema.
         If object_type is provided, only return relations for that object type.
@@ -150,7 +151,7 @@ class SchemaParser:
             return relations.get(object_type, [])
         return relations
     
-    def get_permissions(self, object_type=None):
+    def get_permissions(self, object_type: str | None = None) -> dict[str, list[str]] | list[str]:
         """
         Extract all permissions from the schema.
         If object_type is provided, only return permissions for that object type.
@@ -193,12 +194,12 @@ class SchemaParser:
             return permissions.get(object_type, [])
         return permissions
         
-    def debug_print_tree(self):
+    def debug_print_tree(self) -> None:
         """Print the entire syntax tree for debugging."""
         tree = self.parse()
         self._print_tree_structure(tree.root_node)
     
-    def _print_tree_structure(self, node, indent=0):
+    def _print_tree_structure(self, node: Node, indent: int = 0) -> None:
         """Print the structure of a syntax tree."""
         node_type = node.type
         node_text = node.text.decode('utf-8') if hasattr(node, 'text') else ''
