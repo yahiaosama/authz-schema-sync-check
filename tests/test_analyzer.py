@@ -27,12 +27,12 @@ def test_analyze_valid_models():
     relation_class = analyzer.analyze()
     
     assert relation_class.__name__ == "Relation"
-    assert hasattr(relation_class, "subject_type")
-    assert hasattr(relation_class, "subject_id")
-    assert hasattr(relation_class, "subject_relation")
-    assert hasattr(relation_class, "relation")
-    assert hasattr(relation_class, "object_type")
-    assert hasattr(relation_class, "object_id")
+    assert "subject_type" in relation_class.__annotations__
+    assert "subject_id" in relation_class.__annotations__
+    assert "subject_relation" in relation_class.__annotations__
+    assert "relation" in relation_class.__annotations__
+    assert "object_type" in relation_class.__annotations__
+    assert "object_id" in relation_class.__annotations__
 
 
 def test_get_field_types():
@@ -80,12 +80,12 @@ def test_analyze_invalid_models():
     relation_class = analyzer.analyze()
     
     assert relation_class.__name__ == "Relation"
-    assert not hasattr(relation_class, "subject_type")  # Missing field
-    assert hasattr(relation_class, "subject_id")
-    assert not hasattr(relation_class, "subject_relation")  # Missing field
-    assert hasattr(relation_class, "relation")
-    assert hasattr(relation_class, "object_type")
-    assert hasattr(relation_class, "object_id")
+    assert "subject_type" not in relation_class.__annotations__  # Missing field
+    assert "subject_id" in relation_class.__annotations__
+    assert "subject_relation" not in relation_class.__annotations__  # Missing field
+    assert "relation" in relation_class.__annotations__
+    assert "object_type" in relation_class.__annotations__
+    assert "object_id" in relation_class.__annotations__
 
 
 def test_has_field_invalid_models():

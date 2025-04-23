@@ -99,7 +99,8 @@ class ModelsAnalyzer:
         if not self.relation_class:
             self.analyze()  # Ensure the class is loaded
         
-        return field_name in self.relation_class.__annotations__
+        # Check both __annotations__ and direct attributes
+        return field_name in self.relation_class.__annotations__ or hasattr(self.relation_class, field_name)
     
     def get_field_type(self, field_name: str) -> Optional[Any]:
         """
