@@ -1,5 +1,5 @@
 {
-  "python.defaultInterpreterPath": "${workspaceFolder:Authz Schema Sync Check}/.venv/bin/python",
+  "python.defaultInterpreterPath": "${workspaceFolder:Authz-Schema-Sync-Check}/.venv/bin/python",
   "python.analysis.autoImportCompletions": true,
   "python.analysis.typeCheckingMode": "off",
   "python.terminal.activateEnvironment": true,
@@ -7,16 +7,21 @@
   "mypy-type-checker.args": [
     // NOTE: bug in using the available interpreter: https://github.com/microsoft/vscode-mypy/issues/191
     // as well as the config. Annoying, but it works.
-    "--python-executable=${workspaceFolder:Authz Schema Sync Check}/.venv/bin/python",
-    "--config=${workspaceFolder:Authz Schema Sync Check}/pyproject.toml"
+    "--python-executable=${workspaceFolder:Authz-Schema-Sync-Check}/.venv/bin/python",
+    "--config=${workspaceFolder:Authz-Schema-Sync-Check}/pyproject.toml"
   ],
   "[python]": {
     "editor.defaultFormatter": "charliermarsh.ruff"
   },
-  "python.testing.pytestArgs": ["tests", "-s", "-vvv", "-n", "auto"],
-  "python.testing.unittestEnabled": false,
-  "python.testing.pytestEnabled": true,
-  "python.testing.autoTestDiscoverOnSaveEnabled": true,
-  "ruff.interpreter": ["${workspaceFolder:Authz Schema Sync Check}/.venv/bin/python"],
+    "python.testing.pytestArgs": [
+        "tests",
+        "-s",
+        "-vvv",
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.testing.pytestPath": "${workspaceFolder:Authz-Schema-Sync-Check}/.venv/bin/pytest",
+    "python.testing.autoTestDiscoverOnSaveEnabled": true,
+  "ruff.interpreter": ["${workspaceFolder:Authz-Schema-Sync-Check}/.venv/bin/python"],
   "debugpy.debugJustMyCode": false
 }
