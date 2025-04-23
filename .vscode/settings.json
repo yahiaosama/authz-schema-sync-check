@@ -1,5 +1,5 @@
 {
-  "python.defaultInterpreterPath": "${workspaceFolder: Authz Schema Sync Check}/.venv/bin/python",
+  "python.defaultInterpreterPath": "${workspaceFolder:Authz Schema Sync Check}/.venv/bin/python",
   "python.analysis.autoImportCompletions": true,
   "python.analysis.typeCheckingMode": "off",
   "python.terminal.activateEnvironment": true,
@@ -7,8 +7,8 @@
   "mypy-type-checker.args": [
     // NOTE: bug in using the available interpreter: https://github.com/microsoft/vscode-mypy/issues/191
     // as well as the config. Annoying, but it works.
-    "--python-executable=${workspaceFolder:Auth Schema Sync Check}/.venv/bin/python",
-    "--config=${workspaceFolder:🔑 Authz}/pyproject.toml"
+    "--python-executable=${workspaceFolder:Authz Schema Sync Check}/.venv/bin/python",
+    "--config=${workspaceFolder:Authz Schema Sync Check}/pyproject.toml"
   ],
   "[python]": {
     "editor.defaultFormatter": "charliermarsh.ruff"
