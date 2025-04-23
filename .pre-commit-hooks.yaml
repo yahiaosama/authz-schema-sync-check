@@ -4,4 +4,3 @@
   entry: authz-schema-sync-check
   language: python
   files: '(schema\.zed|models\.py)$'
-  args: [--auto-fix]

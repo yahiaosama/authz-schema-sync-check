@@ -26,7 +26,7 @@ repos:
       - id: authz-schema-sync-check
 ```
 
-By default, the hook will look for `schema.zed` and generate/update `models.py` in the current directory. You can customize the paths using the `--schema` and `--output` options:
+By default, the hook will look for `schema.zed` and generate/update `models.py` in the current directory. You can customize the paths and behavior using the following options:
 
 ```yaml
 repos:
@@ -34,7 +34,28 @@ repos:
     rev: v0.1.0
     hooks:
       - id: authz-schema-sync-check
-        args: ["--schema", "path/to/schema.zed", "--output", "path/to/models.py"]
+        args: ["--schema", "path/to/schema.zed", "--output", "path/to/models.py", "--auto-fix"]
+```
+
+Available options:
+- `--schema`: Path to the schema.zed file (default: `schema.zed`)
+- `--output`: Path to the output models.py file (default: `models.py`)
+- `--auto-fix`: Automatically apply changes if out of sync
+- `--verbose`: Enable verbose output
+
+For projects with multiple schema files, you can add multiple instances of the hook:
+
+```yaml
+repos:
+  - repo: https://github.com/your-username/authz-schema-sync-check
+    rev: v0.1.0
+    hooks:
+      - id: authz-schema-sync-check
+        name: Check user schema
+        args: ["--schema", "schemas/user.zed", "--output", "models/user_models.py"]
+      - id: authz-schema-sync-check
+        name: Check product schema
+        args: ["--schema", "schemas/product.zed", "--output", "models/product_models.py"]
 ```
 
 ### As a Command-line Tool
