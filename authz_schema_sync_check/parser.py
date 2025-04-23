@@ -3,7 +3,7 @@ Schema parser using tree-sitter with the tree-sitter-spicedb grammar.
 """
 
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 from tree_sitter import Parser, Language, Node
 
 # Global variable to cache the language
