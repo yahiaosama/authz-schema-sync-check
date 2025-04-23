@@ -1,10 +1,10 @@
 # authz-schema-sync-check
 
-A pre-commit hook for checking and syncing SpiceDB schema with Python models.
+A pre-commit hook for generating and syncing type definitions from SpiceDB schema.
 
 ## Overview
 
-This package provides a pre-commit hook that validates the synchronization between a SpiceDB schema file (`schema.zed`) and a Python models file (`models.py`). It ensures that the Python models correctly represent the relationships defined in the SpiceDB schema.
+This package provides a pre-commit hook that generates type definitions from a SpiceDB schema file (`schema.zed`) and ensures they are in sync with a Python models file (`models.py`). It uses Git to compare the generated code with the existing code and can automatically apply changes.
 
 ## Installation
 
@@ -26,7 +26,7 @@ repos:
       - id: authz-schema-sync-check
 ```
 
-By default, the hook will look for `schema.zed` and `models.py` in the current directory. You can customize the paths using the `--schema` and `--models` options:
+By default, the hook will look for `schema.zed` and generate/update `models.py` in the current directory. You can customize the paths using the `--schema` and `--output` options:
 
 ```yaml
 repos:
@@ -34,7 +34,7 @@ repos:
     rev: v0.1.0
     hooks:
       - id: authz-schema-sync-check
-        args: ["--schema", "path/to/schema.zed", "--models", "path/to/models.py"]
+        args: ["--schema", "path/to/schema.zed", "--output", "path/to/models.py"]
 ```
 
 ### As a Command-line Tool
@@ -42,25 +42,31 @@ repos:
 You can also use the package as a command-line tool:
 
 ```bash
-authz-schema-sync-check --schema path/to/schema.zed --models path/to/models.py
+# Check if files are in sync
+authz-schema-sync-check --schema path/to/schema.zed --output path/to/models.py
+
+# Automatically apply changes
+authz-schema-sync-check --schema path/to/schema.zed --output path/to/models.py --auto-fix
 ```
 
 Options:
 - `--schema`: Path to the schema.zed file (default: `schema.zed`)
-- `--models`: Path to the models.py file (default: `models.py`)
+- `--output`: Path to the output models.py file (default: `models.py`)
+- `--auto-fix`: Automatically apply changes if out of sync
 - `--verbose`: Enable verbose output
 
-## Validation Rules
+## Generated Type Definitions
 
-The package performs the following validations:
+The package generates the following type definitions based on the schema:
 
-1. **Object Types**: Verifies that all object types defined in `schema.zed` are available as `subject_type` and `object_type` in `models.py`.
-2. **Relations**: Checks that all relations defined in `schema.zed` can be used in the `relation` field in `models.py`.
-3. **Required Fields**: Ensures that the `Relation` class in `models.py` has all required fields (`subject_type`, `subject_id`, `relation`, `object_type`, `object_id`).
+1. **Resource Classes**: Classes for each object type defined in the schema.
+2. **Permission Literals**: Type literals for permissions specific to each resource type.
+3. **Relation Literals**: Type literals for relations specific to each resource type.
+4. **Type Variables**: Type variables for future DSL implementation.
 
-## Example
+### Example
 
-### schema.zed
+#### schema.zed
 
 ```
 definition user {}
@@ -79,21 +85,50 @@ definition organization {
 }
 ```
 
-### models.py
+#### Generated models.py
 
 ```python
-from typing import Literal
+"""
+GENERATED CODE - DO NOT EDIT MANUALLY
+This file is generated from schema.zed and should not be modified directly.
+"""
 
+from typing import Literal, TypeVar, Generic, overload, Union
 from pydantic import BaseModel
 
+# Resource types from schema
+class User:
+    """User resource from schema.zed"""
+    def __init__(self, id: str):
+        self.id = id
+        self.type = "user"
 
-class Relation(BaseModel):
-    subject_type: Literal["user", "group", "organization"]
-    subject_id: str
-    subject_relation: Literal["member"] | None = None
-    relation: Literal["member", "organization", "admin"]
-    object_type: Literal["user", "group", "organization"]
-    object_id: str
+class Group:
+    """Group resource from schema.zed"""
+    def __init__(self, id: str):
+        self.id = id
+        self.type = "group"
+
+class Organization:
+    """Organization resource from schema.zed"""
+    def __init__(self, id: str):
+        self.id = id
+        self.type = "organization"
+
+# Permission literals for each resource type
+GroupPermission = Literal["edit_members"]
+OrganizationPermission = Literal["administrate"]
+
+# Relation literals for each resource type
+GroupRelation = Literal["organization", "member"]
+OrganizationRelation = Literal["admin"]
+
+# Type variables for future DSL implementation
+T = TypeVar('T')
+S = TypeVar('S')
+
+# Placeholder for future DSL implementation
+# This will be implemented separately
 ```
 
 ## Development

@@ -5,8 +5,11 @@ Command-line interface for the pre-commit hook.
 import argparse
 import sys
 from pathlib import Path
+import colorama
 
-from .validator import SchemaModelValidator
+from .parser import SchemaParser
+from .generator import TypeGenerator
+from .git import get_diff, apply_changes
 
 
 def main():
@@ -16,8 +19,11 @@ def main():
     Returns:
         Exit code: 0 for success, 1 for validation errors
     """
+    # Initialize colorama for cross-platform colored output
+    colorama.init()
+    
     parser = argparse.ArgumentParser(
-        description="Check that models.py is in sync with schema.zed"
+        description="Generate type definitions from schema.zed and check they're in sync"
     )
     parser.add_argument(
         "--schema", 
@@ -26,10 +32,15 @@ def main():
         help="Path to the schema.zed file"
     )
     parser.add_argument(
-        "--models", 
+        "--output", 
         type=str, 
         default="models.py", 
-        help="Path to the models.py file"
+        help="Path to the output models.py file"
+    )
+    parser.add_argument(
+        "--auto-fix", 
+        action="store_true", 
+        help="Automatically apply changes if out of sync"
     )
     parser.add_argument(
         "--verbose", 
@@ -39,34 +50,48 @@ def main():
     
     args = parser.parse_args()
     
-    # Check that the files exist
     schema_path = Path(args.schema)
-    models_path = Path(args.models)
+    output_path = Path(args.output)
     
     if not schema_path.exists():
         print(f"Error: Schema file '{schema_path}' does not exist", file=sys.stderr)
         return 1
     
-    if not models_path.exists():
-        print(f"Error: Models file '{models_path}' does not exist", file=sys.stderr)
-        return 1
-    
-    # Validate the schema and models
     try:
-        validator = SchemaModelValidator(schema_path, models_path)
-        errors = validator.validate()
+        # Parse schema and generate types
+        schema_parser = SchemaParser(schema_path)
+        generator = TypeGenerator(schema_parser)
+        generated_content = generator.generate_types()
         
-        # Print errors and exit with appropriate code
-        if errors:
-            for error in errors:
-                print(f"Error: {error}", file=sys.stderr)
+        # Check if output file exists
+        if not output_path.exists():
+            if args.verbose:
+                print(f"Creating new file: {output_path}")
+            apply_changes(output_path, generated_content)
+            return 0
+        
+        # Compare with existing file
+        has_diff, diff_output = get_diff(output_path, generated_content)
+        
+        if not has_diff:
+            if args.verbose:
+                print(f"{colorama.Fore.GREEN}Files are in sync!{colorama.Style.RESET_ALL}")
+            return 0
+        
+        # Handle differences
+        if args.auto_fix:
+            if args.verbose:
+                print(f"{colorama.Fore.YELLOW}Updating {output_path}{colorama.Style.RESET_ALL}")
+            apply_changes(output_path, generated_content)
+            return 0
+        else:
+            print(f"{colorama.Fore.RED}Error: {output_path} is out of sync with {schema_path}{colorama.Style.RESET_ALL}", file=sys.stderr)
+            print("\nDiff:", file=sys.stderr)
+            print(diff_output, file=sys.stderr)
+            print(f"\nRun with {colorama.Fore.YELLOW}--auto-fix{colorama.Style.RESET_ALL} to update the file", file=sys.stderr)
             return 1
-        
-        if args.verbose:
-            print("Schema and models are in sync!")
-        return 0
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        print(f"{colorama.Fore.RED}Error: {e}{colorama.Style.RESET_ALL}", file=sys.stderr)
         return 1
 
 

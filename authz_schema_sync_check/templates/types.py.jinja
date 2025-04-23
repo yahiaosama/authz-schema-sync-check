@@ -1,0 +1,37 @@
+"""
+GENERATED CODE - DO NOT EDIT MANUALLY
+This file is generated from schema.zed and should not be modified directly.
+"""
+
+from typing import Literal, TypeVar, Generic, overload, Union
+from pydantic import BaseModel
+
+# Resource types from schema
+{% for object_type in object_types %}
+class {{ object_type|capitalize }}:
+    """{{ object_type|capitalize }} resource from schema.zed"""
+    def __init__(self, id: str):
+        self.id = id
+        self.type = "{{ object_type }}"
+{% endfor %}
+
+# Permission literals for each resource type
+{% for object_type, perms in permissions.items() %}
+{% if perms %}
+{{ object_type|capitalize }}Permission = Literal[{% for perm in perms %}"{{ perm }}"{% if not loop.last %}, {% endif %}{% endfor %}]
+{% endif %}
+{% endfor %}
+
+# Relation literals for each resource type
+{% for object_type, rels in relations.items() %}
+{% if rels %}
+{{ object_type|capitalize }}Relation = Literal[{% for rel in rels %}"{{ rel }}"{% if not loop.last %}, {% endif %}{% endfor %}]
+{% endif %}
+{% endfor %}
+
+# Type variables for future DSL implementation
+T = TypeVar('T')
+S = TypeVar('S')
+
+# Placeholder for future DSL implementation
+# This will be implemented separately

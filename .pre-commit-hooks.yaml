@@ -1,0 +1,7 @@
+- id: authz-schema-sync-check
+  name: Check SpiceDB schema and models sync
+  description: Validates that models.py is in sync with schema.zed
+  entry: authz-schema-sync-check
+  language: python
+  files: '(schema\.zed|models\.py)$'
+  args: [--auto-fix]
