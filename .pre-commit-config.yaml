@@ -1,0 +1,59 @@
+minimum_pre_commit_version: "3.3.0"
+
+default_language_version:
+  # The minor version cannot be used here as mac will fail finding such a binary
+  python: python3.12
+
+repos:
+  # --------------------------------------------------
+  # general
+  # --------------------------------------------------
+  - repo: meta
+    hooks:
+      - id: check-hooks-apply
+      - id: check-useless-excludes
+
+  # --------------------------------------------------
+  # backend
+  # --------------------------------------------------
+  - repo: local
+    hooks:
+      # Your own hook for testing
+      - id: authz-schema-sync-check
+        name: Check SpiceDB schema and models sync
+        entry: poetry run authz-schema-sync-check
+        language: system
+        files: '(schema\.zed|models\.py)$'
+        pass_filenames: false
+      
+      # Linting and formatting hooks
+      - id: ruff-linting
+        name: ruff-linting
+        description: "Run 'ruff' for linting"
+        entry: /bin/bash -c 'cd authz_schema_sync_check && poetry run ruff check --force-exclude --fix --preview ./'
+        pass_filenames: false
+        language: system
+        files: ^authz_schema_sync_check/
+      
+      - id: ruff-format
+        name: ruff-format
+        description: "Run 'ruff' for formatting"
+        entry: /bin/bash -c 'cd authz_schema_sync_check && poetry run ruff format --force-exclude ./'
+        pass_filenames: false
+        language: system
+        files: ^authz_schema_sync_check/
+      
+      - id: mypy
+        name: mypy
+        description: "Run 'mypy' for type checking python code"
+        entry: /bin/bash -c 'cd authz_schema_sync_check && poetry run mypy ./'
+        pass_filenames: false
+        language: system
+        files: ^authz_schema_sync_check/
+      
+      - id: poetry-check
+        name: poetry-check
+        language: system
+        pass_filenames: false
+        entry: /bin/bash -c 'cd authz_schema_sync_check && poetry check'
+        files: ^pyproject.toml$|poetry.lock$
