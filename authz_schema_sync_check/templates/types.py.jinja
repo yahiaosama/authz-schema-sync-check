@@ -3,17 +3,7 @@ GENERATED CODE - DO NOT EDIT MANUALLY
 This file is generated from schema.zed and should not be modified directly.
 """
 
-from typing import Literal, TypeVar, Generic, overload, Union
-from pydantic import BaseModel
-
-# Resource types from schema
-{% for object_type in object_types %}
-class {{ object_type|capitalize }}:
-    """{{ object_type|capitalize }} resource from schema.zed"""
-    def __init__(self, id: str):
-        self.id = id
-        self.type = "{{ object_type }}"
-{% endfor %}
+from typing import Literal, TypeVar, Generic, Optional, Union, Any, Dict, Type, overload, cast, get_args
 
 # Permission literals for each resource type
 {% for object_type, perms in permissions.items() %}
@@ -29,9 +19,107 @@ class {{ object_type|capitalize }}:
 {% endif %}
 {% endfor %}
 
-# Type variables for future DSL implementation
-T = TypeVar('T')
-S = TypeVar('S')
+# Resource types from schema
+{% for object_type in object_types %}
+class {{ object_type|capitalize }}:
+    """{{ object_type|capitalize }} resource from schema.zed"""
+    def __init__(self, id: str):
+        self.id = id
+        self.type = "{{ object_type }}"
+        self._relation: Optional[str] = None
+    
+    {% for rel in relations.get(object_type, []) %}
+    def {{ rel }}(self) -> "{{ object_type|capitalize }}":
+        """Set the relation to '{{ rel }}'."""
+        self._relation = "{{ rel }}"
+        return self
+    {% endfor %}
+    
+    @property
+    def relation(self) -> Optional[str]:
+        return self._relation
+{% endfor %}
 
-# Placeholder for future DSL implementation
-# This will be implemented separately
+# Type variable for resources
+T = TypeVar('T')
+
+# Permission type mapping
+PERMISSION_MAP: Dict[str, Type] = {
+    {% for object_type, perms in permissions.items() %}
+    {% if perms %}
+    "{{ object_type }}": {{ object_type|capitalize }}Permission,
+    {% endif %}
+    {% endfor %}
+}
+
+# DSL implementation
+class ResourceCheck(Generic[T]):
+    """First step in the permission check chain."""
+    def __init__(self, resource: T):
+        self.resource = resource
+    
+    def check_that(self, subject: Any) -> "SubjectCheck[T]":
+        """
+        Check that the subject has permissions on the resource.
+        
+        Args:
+            subject: The subject to check permissions for
+            
+        Returns:
+            A SubjectCheck object to continue the permission check chain
+        """
+        return SubjectCheck(self.resource, subject)
+
+class SubjectCheck(Generic[T]):
+    """Second step in the permission check chain."""
+    def __init__(self, resource: T, subject: Any):
+        self.resource = resource
+        self.subject = subject
+    
+    {% for object_type, perms in permissions.items() %}
+    {% if perms %}
+    @overload
+    def can(self: "SubjectCheck[{{ object_type|capitalize }}]", permission: {{ object_type|capitalize }}Permission) -> bool: ...
+    {% endif %}
+    {% endfor %}
+    
+    def can(self, permission: str) -> bool:
+        """
+        Check if the subject has the specified permission on the resource.
+        
+        Args:
+            permission: The permission to check
+            
+        Returns:
+            True if the subject has the permission, False otherwise
+        """
+        resource_type = getattr(self.resource, "type", None)
+        resource_id = getattr(self.resource, "id", None)
+        subject_type = getattr(self.subject, "type", None)
+        subject_id = getattr(self.subject, "id", None)
+        subject_relation = getattr(self.subject, "relation", None)
+        
+        # Validate permission
+        if resource_type in PERMISSION_MAP:
+            perm_type = PERMISSION_MAP[resource_type]
+            valid_perms = get_args(perm_type)
+            if permission not in valid_perms:
+                raise ValueError(f"Invalid permission '{permission}' for resource type '{resource_type}'. Valid permissions: {valid_perms}")
+        
+        # Placeholder for SpiceDB integration
+        print(f"Checking permission: {subject_type}:{subject_id}{f'#{subject_relation}' if subject_relation else ''} -> {permission} -> {resource_type}:{resource_id}")
+        
+        # For now, just return True as a placeholder
+        return True
+
+def on_resource(resource: T) -> ResourceCheck[T]:
+    """
+    Start a permission check chain for the specified resource.
+    
+    Args:
+        resource: The resource to check permissions on
+        
+    Returns:
+        A ResourceCheck object to continue the permission check chain
+    """
+    return ResourceCheck(resource)
