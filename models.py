@@ -6,39 +6,59 @@ This file is generated from schema.zed and should not be modified directly.
 from typing import Literal, TypeVar, Generic, Any, overload
 
 # Permission literals for each resource type
-{% for object_type, perms in permissions.items() %}
-{% if perms %}
-{{ object_type|capitalize }}Permission = Literal[{% for perm in perms %}"{{ perm }}"{% if not loop.last %}, {% endif %}{% endfor %}]
-{% endif %}
-{% endfor %}
+GroupPermission = Literal["edit_members"]
+OrganizationPermission = Literal["administrate"]
 
 # Relation literals for each resource type
-{% for object_type, rels in relations.items() %}
-{% if rels %}
-{{ object_type|capitalize }}Relation = Literal[{% for rel in rels %}"{{ rel }}"{% if not loop.last %}, {% endif %}{% endfor %}]
-{% endif %}
-{% endfor %}
+GroupRelation = Literal["organization", "member"]
+OrganizationRelation = Literal["admin"]
 
 # Resource types from schema
-{% for object_type in object_types %}
-class {{ object_type|capitalize }}:
-    """{{ object_type|capitalize }} resource from schema.zed"""
+class User:
+    """User resource from schema.zed"""
     def __init__(self, id: str):
         self.id = id
-        self.type = "{{ object_type }}"
+        self.type = "user"
         self._relation: str | None = None
     
-    {% for rel in relations.get(object_type, []) %}
-    def {{ rel }}(self) -> "{{ object_type|capitalize }}":
-        """Set the relation to '{{ rel }}'."""
-        self._relation = "{{ rel }}"
-        return self
-    {% endfor %}
     
     @property
     def relation(self) -> str | None:
         return self._relation
-{% endfor %}
+class Group:
+    """Group resource from schema.zed"""
+    def __init__(self, id: str):
+        self.id = id
+        self.type = "group"
+        self._relation: str | None = None
+    
+    def organization(self) -> "Group":
+        """Set the relation to 'organization'."""
+        self._relation = "organization"
+        return self
+    def member(self) -> "Group":
+        """Set the relation to 'member'."""
+        self._relation = "member"
+        return self
+    
+    @property
+    def relation(self) -> str | None:
+        return self._relation
+class Organization:
+    """Organization resource from schema.zed"""
+    def __init__(self, id: str):
+        self.id = id
+        self.type = "organization"
+        self._relation: str | None = None
+    
+    def admin(self) -> "Organization":
+        """Set the relation to 'admin'."""
+        self._relation = "admin"
+        return self
+    
+    @property
+    def relation(self) -> str | None:
+        return self._relation
 
 # Type variable for resources
 T = TypeVar('T')
@@ -67,12 +87,10 @@ class SubjectCheck(Generic[T]):
         self.resource = resource
         self.subject = subject
     
-    {% for object_type, perms in permissions.items() %}
-    {% if perms %}
     @overload
-    def can(self: "SubjectCheck[{{ object_type|capitalize }}]", permission: {{ object_type|capitalize }}Permission) -> bool: ...
-    {% endif %}
-    {% endfor %}
+    def can(self: "SubjectCheck[Group]", permission: GroupPermission) -> bool: ...
+    @overload
+    def can(self: "SubjectCheck[Organization]", permission: OrganizationPermission) -> bool: ...
     
     def can(self, permission: str) -> bool:
         """

@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 class ObjectType(str, Enum):
     """Valid object types from schema.zed"""
+
     USER = "user"
     GROUP = "group"
     ORGANIZATION = "organization"
@@ -13,6 +14,7 @@ class ObjectType(str, Enum):
 
 class RelationType(str, Enum):
     """Valid relation types from schema.zed"""
+
     MEMBER = "member"
     ORGANIZATION = "organization"
     ADMIN = "admin"
