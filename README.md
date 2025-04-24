@@ -34,7 +34,7 @@ repos:
     rev: v0.1.0
     hooks:
       - id: authz-schema-sync-check
-        args: ["--schema", "path/to/schema.zed", "--output", "path/to/models.py", "--auto-fix"]
+        args: ["--schema", "path/to/schema.zed", "--output", "path/to/models.py", "--auto-fix", "--colorized-diff=false"]
 ```
 
 Available options:
@@ -42,6 +42,7 @@ Available options:
 - `--output`: Path to the output models.py file (default: `models.py`)
 - `--auto-fix`: Automatically apply changes if out of sync
 - `--verbose`: Enable verbose output
+- `--colorized-diff`: Enable or disable colorized diff output (true/false, default: true)
 
 For projects with multiple schema files, you can add multiple instances of the hook:
 
@@ -68,6 +69,9 @@ authz-schema-sync-check --schema path/to/schema.zed --output path/to/models.py
 
 # Automatically apply changes
 authz-schema-sync-check --schema path/to/schema.zed --output path/to/models.py --auto-fix
+
+# Check with colorized diff disabled
+authz-schema-sync-check --schema path/to/schema.zed --output path/to/models.py --colorized-diff=false
 ```
 
 Options:
@@ -75,6 +79,7 @@ Options:
 - `--output`: Path to the output models.py file (default: `models.py`)
 - `--auto-fix`: Automatically apply changes if out of sync
 - `--verbose`: Enable verbose output
+- `--colorized-diff`: Enable or disable colorized diff output (true/false, default: true)
 
 ## Generated Type Definitions
 

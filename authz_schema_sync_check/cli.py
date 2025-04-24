@@ -12,6 +12,38 @@ from .generator import TypeGenerator
 from .git import get_diff, apply_changes
 
 
+def colorize_diff(diff_text: str) -> str:
+    """
+    Add colors to a unified diff output.
+    
+    Args:
+        diff_text: The unified diff text
+        
+    Returns:
+        Colorized diff text
+    """
+    colorized_lines = []
+    
+    for line in diff_text.splitlines():
+        if line.startswith('---') or line.startswith('+++'):
+            # File headers
+            colorized_lines.append(f"{colorama.Fore.BLUE}{line}{colorama.Style.RESET_ALL}")
+        elif line.startswith('-'):
+            # Removed lines
+            colorized_lines.append(f"{colorama.Fore.RED}{line}{colorama.Style.RESET_ALL}")
+        elif line.startswith('+'):
+            # Added lines
+            colorized_lines.append(f"{colorama.Fore.GREEN}{line}{colorama.Style.RESET_ALL}")
+        elif line.startswith('@@'):
+            # Hunk headers
+            colorized_lines.append(f"{colorama.Fore.CYAN}{line}{colorama.Style.RESET_ALL}")
+        else:
+            # Context lines
+            colorized_lines.append(line)
+    
+    return '\n'.join(colorized_lines)
+
+
 def main():
     """
     Main entry point for the CLI.
@@ -46,6 +78,12 @@ def main():
         "--verbose", 
         action="store_true", 
         help="Enable verbose output"
+    )
+    parser.add_argument(
+        "--colorized-diff",
+        type=lambda x: x.lower() == "true",
+        default=True,
+        help="Enable or disable colorized diff output (true/false)"
     )
     
     args = parser.parse_args()
@@ -87,7 +125,13 @@ def main():
         else:
             print(f"{colorama.Fore.RED}Error: {output_path} is out of sync with {schema_path}{colorama.Style.RESET_ALL}", file=sys.stderr)
             print("\nDiff:", file=sys.stderr)
-            print(diff_output, file=sys.stderr)
+            
+            # Apply colorization if enabled
+            if args.colorized_diff:
+                print(colorize_diff(diff_output), file=sys.stderr)
+            else:
+                print(diff_output, file=sys.stderr)
+                
             print(f"\nRun with {colorama.Fore.YELLOW}--auto-fix{colorama.Style.RESET_ALL} to update the file", file=sys.stderr)
             return 1
     except Exception as e:
