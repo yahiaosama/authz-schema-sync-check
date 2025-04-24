@@ -68,6 +68,36 @@ def test_write_types(tmp_path):
     assert "class Organization" in content
 
 
+def test_write_types_with_formatting(tmp_path):
+    """Test that the generator writes formatted code to a file."""
+    schema_path = FIXTURES_DIR / "valid_schema.zed"
+    schema_parser = SchemaParser(schema_path)
+
+    generator = TypeGenerator(schema_parser)
+
+    # Mock the _format_with_ruff method to verify it's called
+    original_format = generator._format_with_ruff
+    format_called = False
+
+    def mock_format(code):
+        nonlocal format_called
+        format_called = True
+        return original_format(code)
+
+    generator._format_with_ruff = mock_format
+
+    # Write to a temporary file
+    output_path = tmp_path / "models.py"
+    generator.write_types(output_path)
+
+    # Verify formatting was applied
+    assert format_called
+
+    # Check file content
+    content = output_path.read_text()
+    assert "GENERATED CODE - DO NOT EDIT MANUALLY" in content
+
+
 def test_generate_types_with_invalid_schema():
     """Test that the generator can handle an invalid schema."""
     schema_path = FIXTURES_DIR / "invalid_schema.zed"
