@@ -3,8 +3,8 @@ GENERATED CODE - DO NOT EDIT MANUALLY
 This file is generated from schema.zed and should not be modified directly.
 """
 
-from typing import Literal, TypeVar, Generic, Any, overload, NamedTuple
 from abc import ABC
+from typing import Literal, TypeVar, Generic, Any, overload, NamedTuple
 
 
 class CheckRequest(NamedTuple):
