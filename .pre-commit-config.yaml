@@ -23,7 +23,14 @@ repos:
         name: Check SpiceDB schema and models sync
         entry: poetry run authz-schema-sync-check
         language: system
-        files: '(schema\.zed|models\.py)$'
+        args: [
+          "--schema", "authz_schema_sync_check/tests/fixtures/valid_schema.zed",
+          "--output", "authz_schema_sync_check/tests/fixtures/valid_generated_file.py",
+          "--verbose",
+          "--colorized-diff=true",
+          "--auto-fix"
+        ]
+        files: '\.zed$|valid_generated_file\.py$'
         pass_filenames: false
       
       # Linting and formatting hooks

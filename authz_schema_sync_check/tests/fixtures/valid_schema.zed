@@ -1,6 +1,18 @@
 // SpiceDB schema, see https://authzed.com/docs/spicedb/concepts/schema.
 
-definition user {}
+definition user {
+    relation organization: organization
+    relation self: user
+
+    permission read = self + organization->read
+    permission update = self + organization->administrate
+
+    permission make_admin = organization->administrate
+    // The old UserPolicy had a more complicated check to prevent removal of the
+    // last admin from an organization, but it's simpler (albeit not fully equivalent)
+    // to prevent users from revoking their own admin status.
+    permission revoke_admin = organization->administrate - self
+}
 
 definition group {
     relation organization: organization
@@ -11,6 +23,9 @@ definition group {
 
 definition organization {
     relation admin: user | group#member
+    relation member: user
 
     permission administrate = admin
+    permission read = member + administrate
 }
+

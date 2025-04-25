@@ -3,4 +3,4 @@
   description: Validates that models.py is in sync with schema.zed
   entry: authz-schema-sync-check
   language: python
-  files: '(schema\.zed|models\.py)$'
+  files: '\.zed$|generated_file\.py$'

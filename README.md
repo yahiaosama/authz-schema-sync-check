@@ -20,21 +20,46 @@ Add the following to your `.pre-commit-config.yaml` file:
 
 ```yaml
 repos:
-  - repo: https://github.com/your-username/authz-schema-sync-check
+  - repo: https://github.com/yahiaosama/authz-schema-sync-check
     rev: v0.1.0
     hooks:
       - id: authz-schema-sync-check
 ```
 
-By default, the hook will look for `schema.zed` and generate/update `models.py` in the current directory. You can customize the paths and behavior using the following options:
+By default, the hook will look for `schema.zed` and generate/update `models.py` in the current directory. You can customize the paths and behavior using the `args` field:
 
 ```yaml
 repos:
-  - repo: https://github.com/your-username/authz-schema-sync-check
+  - repo: https://github.com/yahiaosama/authz-schema-sync-check
     rev: v0.1.0
     hooks:
       - id: authz-schema-sync-check
-        args: ["--schema", "path/to/schema.zed", "--output", "path/to/models.py", "--auto-fix", "--colorized-diff=false"]
+        args: [
+          "--schema", "path/to/schema.zed",
+          "--output", "path/to/models.py",
+          "--auto-fix"
+        ]
+        files: '\.zed$|models\.py$'
+        pass_filenames: false
+```
+
+For local development with Poetry, use:
+
+```yaml
+repos:
+  - repo: local
+    hooks:
+      - id: authz-schema-sync-check
+        name: Check SpiceDB schema and models sync
+        entry: poetry run authz-schema-sync-check
+        language: system
+        args: [
+          "--schema", "path/to/schema.zed",
+          "--output", "path/to/models.py",
+          "--auto-fix"
+        ]
+        files: '\.zed$|models\.py$'
+        pass_filenames: false
 ```
 
 Available options:
@@ -44,20 +69,9 @@ Available options:
 - `--verbose`: Enable verbose output
 - `--colorized-diff`: Enable or disable colorized diff output (true/false, default: true)
 
-For projects with multiple schema files, you can add multiple instances of the hook:
-
-```yaml
-repos:
-  - repo: https://github.com/your-username/authz-schema-sync-check
-    rev: v0.1.0
-    hooks:
-      - id: authz-schema-sync-check
-        name: Check user schema
-        args: ["--schema", "schemas/user.zed", "--output", "models/user_models.py"]
-      - id: authz-schema-sync-check
-        name: Check product schema
-        args: ["--schema", "schemas/product.zed", "--output", "models/product_models.py"]
-```
+The `files` pattern determines when the hook runs. In the example above, it will run whenever:
+- Any file with a `.zed` extension is modified
+- The `models.py` file is modified
 
 ### As a Command-line Tool
 
