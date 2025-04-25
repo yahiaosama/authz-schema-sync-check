@@ -70,16 +70,17 @@ class SubjectCheck(Generic[T]):
     {% for object_type, perms in permissions.items() %}
     {% if perms %}
     @overload
-    def can(self: "SubjectCheck[{{ object_type|capitalize }}]", permission: {{ object_type|capitalize }}Permission) -> bool: ...
+    def can(self: "SubjectCheck[{{ object_type|capitalize }}]", permission: {{ object_type|capitalize }}Permission, context: dict[str, Any] | None = None) -> bool: ...
     {% endif %}
     {% endfor %}
     
-    def can(self, permission: str) -> bool:
+    def can(self, permission: str, context: dict[str, Any] | None = None) -> bool:
         """
         Check if the subject has the specified permission on the resource.
         
         Args:
             permission: The permission to check
+            context: Additional context for the permission check (optional)
             
         Returns:
             True if the subject has the permission, False otherwise
@@ -90,8 +91,11 @@ class SubjectCheck(Generic[T]):
         subject_id = getattr(self.subject, "id", None)
         subject_relation = getattr(self.subject, "relation", None)
         
+        # Use context if provided
+        context_str = f", context: {context}" if context else ""
+        
         # Placeholder for SpiceDB integration
-        print(f"Checking permission: {subject_type}:{subject_id}{f'#{subject_relation}' if subject_relation else ''} -> {permission} -> {resource_type}:{resource_id}")
+        print(f"Checking permission: {subject_type}:{subject_id}{f'#{subject_relation}' if subject_relation else ''} -> {permission} -> {resource_type}:{resource_id}{context_str}")
         
         # For now, just return True as a placeholder
         return True
