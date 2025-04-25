@@ -2,11 +2,9 @@
 Git integration for comparing and updating files.
 """
 
-import os
 from pathlib import Path
 from typing import Tuple, Optional
 import difflib
-import git  # GitPython library
 
 
 def get_diff(file_path: Path, content: str) -> Tuple[bool, str]:
@@ -46,39 +44,19 @@ def get_diff(file_path: Path, content: str) -> Tuple[bool, str]:
     return bool(diff_text), diff_text
 
 
-def apply_changes(file_path: Path, content: str) -> bool:
+def apply_changes(file_path: Path, content: str) -> None:
     """
-    Apply changes to the file and add it to git index if in a repository.
+    Apply changes to the file without staging in git.
 
     Args:
         file_path: Path to the file to update
         content: New content to write
-
-    Returns:
-        True if the file was added to git index, False otherwise
     """
     # Create parent directories if they don't exist
     file_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Write the content
     file_path.write_text(content)
-
-    # Add the file to git index if it's in a git repository
-    try:
-        # Find the git repository containing this file
-        repo_path = find_git_repo(file_path)
-        if repo_path:
-            repo = git.Repo(repo_path)
-            # Get relative path to the repository root
-            rel_path = os.path.relpath(file_path, repo_path)
-            # Add the file to the index
-            repo.git.add(rel_path)
-            return True
-    except (git.InvalidGitRepositoryError, git.NoSuchPathError):
-        # Not in a git repository or other git error
-        pass
-
-    return False
 
 
 def find_git_repo(path: Path) -> Optional[str]:
