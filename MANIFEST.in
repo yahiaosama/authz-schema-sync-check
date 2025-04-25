@@ -1,3 +1,3 @@
-include tree-sitter-spicedb/grammar.js
-include tree-sitter-spicedb/src/**/*
-include tree-sitter-spicedb/queries/**/*
+include authz_schema_sync_check/tree-sitter-spicedb/grammar.js
+include authz_schema_sync_check/tree-sitter-spicedb/src/**/*
+include authz_schema_sync_check/tree-sitter-spicedb/queries/**/*

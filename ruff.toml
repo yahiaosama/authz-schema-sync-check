@@ -1,0 +1,2 @@
+# Ruff configuration
+exclude = ["tree-sitter-spicedb"]

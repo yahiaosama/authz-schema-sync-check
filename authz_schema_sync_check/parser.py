@@ -26,7 +26,7 @@ def get_spicedb_language() -> Language:
     library_path = Path(__file__).parent / "build" / "spicedb.so"
 
     # Path to the tree-sitter-spicedb directory
-    spicedb_dir = Path(__file__).parent.parent / "tree-sitter-spicedb"
+    spicedb_dir = Path(__file__).parent / "tree-sitter-spicedb"
 
     if not spicedb_dir.exists():
         raise ValueError(f"SpiceDB grammar directory not found at {spicedb_dir}")
