@@ -3,7 +3,18 @@ GENERATED CODE - DO NOT EDIT MANUALLY
 This file is generated from schema.zed and should not be modified directly.
 """
 
-from typing import Literal, TypeVar, Generic, Any, overload
+from typing import Literal, TypeVar, Generic, Any, overload, NamedTuple
+from abc import ABC, abstractmethod
+
+class CheckRequest(NamedTuple):
+    """A request to check a permission or relation."""
+    subject_type: str
+    subject_id: str
+    subject_relation: str | None
+    action: str  # The permission or relation name
+    resource_type: str
+    resource_id: str
+    context: dict[str, Any] | None = None
 
 # Permission literals for each resource type
 {% for object_type, perms in permissions.items() %}
@@ -19,29 +30,121 @@ from typing import Literal, TypeVar, Generic, Any, overload
 {% endif %}
 {% endfor %}
 
+# Abstract base class for all resources
+class Resource(ABC):
+    """Abstract base class for all resources."""
+    def __init__(self, id: str, subject_relation: str | None = None):
+        self.id = id
+        self.type = ""  # Will be overridden by subclasses
+        self.subject_relation = subject_relation
+    
+    @abstractmethod
+    def can(self, subject: Any, permission: str, context: dict[str, Any] | None = None) -> bool:
+        """
+        Check if the subject has the specified permission on this resource.
+        
+        Args:
+            subject: The subject to check permissions for
+            permission: The permission to check
+            context: Additional context for the permission check (optional)
+            
+        Returns:
+            True if the subject has the permission, False otherwise
+        """
+        pass
+    
+    @abstractmethod
+    def is_(self, subject: Any, relation: str, context: dict[str, Any] | None = None) -> bool:
+        """
+        Check if the subject has the specified relation to this resource.
+        
+        Args:
+            subject: The subject to check relations for
+            relation: The relation to check
+            context: Additional context for the relation check (optional)
+            
+        Returns:
+            True if the subject has the relation, False otherwise
+        """
+        pass
+
 # Resource types from schema
 {% for object_type in object_types %}
-class {{ object_type|capitalize }}:
+class {{ object_type|capitalize }}(Resource):
     """{{ object_type|capitalize }} resource from schema.zed"""
-    def __init__(self, id: str):
-        self.id = id
+    def __init__(self, id: str, subject_relation: str | None = None):
+        super().__init__(id, subject_relation)
         self.type = "{{ object_type }}"
-        self._relation: str | None = None
     
-    {% for rel in relations.get(object_type, []) %}
-    def {{ rel }}(self) -> "{{ object_type|capitalize }}":
-        """Set the relation to '{{ rel }}'."""
-        self._relation = "{{ rel }}"
-        return self
-    {% endfor %}
+    {% if permissions.get(object_type) %}
+    def can(self, subject: Any, permission: {{ object_type|capitalize }}Permission, context: dict[str, Any] | None = None) -> bool:
+        """
+        Check if the subject has the specified permission on this resource.
+        
+        Args:
+            subject: The subject to check permissions for
+            permission: The permission to check
+            context: Additional context for the permission check (optional)
+            
+        Returns:
+            True if the subject has the permission, False otherwise
+        """
+        subject_type = getattr(subject, "type", None)
+        subject_id = getattr(subject, "id", None)
+        subject_relation = getattr(subject, "subject_relation", None)
+        
+        # Use context if provided
+        context_str = f", context: {context}" if context else ""
+        
+        # Placeholder for SpiceDB integration
+        print(f"Checking permission: {subject_type}:{subject_id}{f'#{subject_relation}' if subject_relation else ''} -> {permission} -> {self.type}:{self.id}{context_str}")
+        
+        # For now, just return True as a placeholder
+        return True
+    {% else %}
+    def can(self, subject: Any, permission: str, context: dict[str, Any] | None = None) -> bool:
+        """
+        {{ object_type|capitalize }} does not have any permissions defined.
+        """
+        raise ValueError(f"{{ object_type|capitalize }} does not have any permissions defined")
+    {% endif %}
     
-    @property
-    def relation(self) -> str | None:
-        return self._relation
+    {% if relations.get(object_type) %}
+    def is_(self, subject: Any, relation: {{ object_type|capitalize }}Relation, context: dict[str, Any] | None = None) -> bool:
+        """
+        Check if the subject has the specified relation to this resource.
+        
+        Args:
+            subject: The subject to check relations for
+            relation: The relation to check
+            context: Additional context for the relation check (optional)
+            
+        Returns:
+            True if the subject has the relation, False otherwise
+        """
+        subject_type = getattr(subject, "type", None)
+        subject_id = getattr(subject, "id", None)
+        subject_relation = getattr(subject, "subject_relation", None)
+        
+        # Use context if provided
+        context_str = f", context: {context}" if context else ""
+        
+        # Placeholder for SpiceDB integration
+        print(f"Checking relation: {subject_type}:{subject_id}{f'#{subject_relation}' if subject_relation else ''} -> {relation} -> {self.type}:{self.id}{context_str}")
+        
+        # For now, just return True as a placeholder
+        return True
+    {% else %}
+    def is_(self, subject: Any, relation: str, context: dict[str, Any] | None = None) -> bool:
+        """
+        {{ object_type|capitalize }} does not have any relations defined.
+        """
+        raise ValueError(f"{{ object_type|capitalize }} does not have any relations defined")
+    {% endif %}
 {% endfor %}
 
 # Type variable for resources
-T = TypeVar('T')
+T = TypeVar('T', bound=Resource)  # Constrain T to be a subclass of Resource
 
 # DSL implementation
 class ResourceCheck(Generic[T]):
@@ -70,35 +173,58 @@ class SubjectCheck(Generic[T]):
     {% for object_type, perms in permissions.items() %}
     {% if perms %}
     @overload
-    def can(self: "SubjectCheck[{{ object_type|capitalize }}]", permission: {{ object_type|capitalize }}Permission, context: dict[str, Any] | None = None) -> bool: ...
+    def can(self: "SubjectCheck[{{ object_type|capitalize }}]", permission: {{ object_type|capitalize }}Permission, context: dict[str, Any] | None = None) -> CheckRequest: ...
     {% endif %}
     {% endfor %}
     
-    def can(self, permission: str, context: dict[str, Any] | None = None) -> bool:
+    def can(self, permission: str, context: dict[str, Any] | None = None) -> CheckRequest:
         """
-        Check if the subject has the specified permission on the resource.
+        Create a permission check request.
         
         Args:
             permission: The permission to check
             context: Additional context for the permission check (optional)
             
         Returns:
-            True if the subject has the permission, False otherwise
+            A CheckRequest object
         """
-        resource_type = getattr(self.resource, "type", None)
-        resource_id = getattr(self.resource, "id", None)
-        subject_type = getattr(self.subject, "type", None)
-        subject_id = getattr(self.subject, "id", None)
-        subject_relation = getattr(self.subject, "relation", None)
+        return CheckRequest(
+            subject_type=self.subject.type,
+            subject_id=self.subject.id,
+            subject_relation=getattr(self.subject, "subject_relation", None),
+            action=permission,
+            resource_type=self.resource.type,
+            resource_id=self.resource.id,
+            context=context
+        )
+    
+    {% for object_type, rels in relations.items() %}
+    {% if rels %}
+    @overload
+    def is_(self: "SubjectCheck[{{ object_type|capitalize }}]", relation: {{ object_type|capitalize }}Relation, context: dict[str, Any] | None = None) -> CheckRequest: ...
+    {% endif %}
+    {% endfor %}
+    
+    def is_(self, relation: str, context: dict[str, Any] | None = None) -> CheckRequest:
+        """
+        Create a relation check request.
         
-        # Use context if provided
-        context_str = f", context: {context}" if context else ""
-        
-        # Placeholder for SpiceDB integration
-        print(f"Checking permission: {subject_type}:{subject_id}{f'#{subject_relation}' if subject_relation else ''} -> {permission} -> {resource_type}:{resource_id}{context_str}")
-        
-        # For now, just return True as a placeholder
-        return True
+        Args:
+            relation: The relation to check
+            context: Additional context for the relation check (optional)
+            
+        Returns:
+            A CheckRequest object
+        """
+        return CheckRequest(
+            subject_type=self.subject.type,
+            subject_id=self.subject.id,
+            subject_relation=getattr(self.subject, "subject_relation", None),
+            action=relation,
+            resource_type=self.resource.type,
+            resource_id=self.resource.id,
+            context=context
+        )
 
 def on_resource(resource: T) -> ResourceCheck[T]:
     """

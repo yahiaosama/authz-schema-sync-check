@@ -7,7 +7,7 @@ from typing import Any
 from tree_sitter import Parser, Language, Node
 
 # Global variable to cache the language
-_SPICEDB_LANGUAGE = None
+_SPICEDB_LANGUAGE: Language | None = None
 
 
 def get_spicedb_language() -> Language:
