@@ -104,10 +104,30 @@ def main():
 
         # Check if output file exists
         if not output_path.exists():
-            if args.verbose:
-                print(f"Creating new file: {output_path}")
-            apply_changes(output_path, generated_content)
-            return 0
+            if args.auto_fix:
+                if args.verbose:
+                    print(
+                        f"{colorama.Fore.CYAN}Creating new file: {output_path}{colorama.Style.RESET_ALL}"
+                    )
+                apply_changes(output_path, generated_content)
+                print(
+                    f"{colorama.Fore.RED}Error: Output file '{output_path}' did not exist but has been created{colorama.Style.RESET_ALL}",
+                    file=sys.stderr,
+                )
+                print(
+                    f"{colorama.Fore.YELLOW}Please review and commit the newly created file{colorama.Style.RESET_ALL}",
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    f"{colorama.Fore.RED}Error: Output file '{output_path}' does not exist{colorama.Style.RESET_ALL}",
+                    file=sys.stderr,
+                )
+                print(
+                    f"\nRun with {colorama.Fore.YELLOW}--auto-fix{colorama.Style.RESET_ALL} to create the file",
+                    file=sys.stderr,
+                )
+            return 1  # Always return error code
 
         # Compare with existing file
         has_diff, diff_output = get_diff(output_path, generated_content)

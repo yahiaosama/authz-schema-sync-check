@@ -227,14 +227,14 @@ def test_cli_with_colorized_diff_disabled(mocker):
     mock_colorize_diff.assert_not_called()
 
 
-def test_cli_nonexistent_output_creates_file(mocker):
-    """Test that the CLI creates a new file if the output file doesn't exist."""
+def test_cli_nonexistent_output_fails(mocker):
+    """Test that the CLI fails if the output file doesn't exist."""
     schema_path = FIXTURES_DIR / "valid_schema.zed"
     output_path = Path("nonexistent.py")
 
     # Setup test environment with schema exists but output doesn't
     path_exists = {str(schema_path): True, str(output_path): False}
-    setup_cli_test(
+    mocks = setup_cli_test(
         mocker,
         schema_path=schema_path,
         output_path=output_path,
@@ -248,5 +248,39 @@ def test_cli_nonexistent_output_creates_file(mocker):
     result = main()
 
     # Assertions
-    assert result == 0
-    mock_apply_changes.assert_called_once()
+    assert result == 1  # Should fail
+    mock_apply_changes.assert_not_called()  # Should not create file without --auto-fix
+    mocks["mock_stderr"].write.assert_called()  # Should write error message
+
+
+def test_cli_nonexistent_output_with_auto_fix(mocker):
+    """Test that the CLI creates a new file but still fails if the output file doesn't exist and --auto-fix is used."""
+    schema_path = FIXTURES_DIR / "valid_schema.zed"
+    output_path = Path("nonexistent.py")
+
+    # Setup test environment with schema exists but output doesn't, and --auto-fix
+    args = [
+        "check-schema",
+        f"--schema={schema_path}",
+        f"--output={output_path}",
+        "--auto-fix",
+    ]
+    path_exists = {str(schema_path): True, str(output_path): False}
+    mocks = setup_cli_test(
+        mocker,
+        args=args,
+        schema_path=schema_path,
+        output_path=output_path,
+        path_exists=path_exists,
+    )
+
+    # Mock apply_changes
+    mock_apply_changes = mocker.patch("authz_schema_sync_check.cli.apply_changes")
+
+    # Run the test
+    result = main()
+
+    # Assertions
+    assert result == 1  # Should still fail
+    mock_apply_changes.assert_called_once()  # Should create file with --auto-fix
+    mocks["mock_stderr"].write.assert_called()  # Should write error message
