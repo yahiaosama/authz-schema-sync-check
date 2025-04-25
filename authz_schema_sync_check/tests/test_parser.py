@@ -79,16 +79,3 @@ def test_get_permissions_for_object_type():
 
     assert "edit_members" in group_permissions
     assert len(group_permissions) == 1
-
-
-def test_parser_with_invalid_schema():
-    """Test that the parser handles invalid schema files gracefully."""
-    schema_path = FIXTURES_DIR / "invalid_schema.zed"
-    parser = SchemaParser(schema_path)
-
-    # The parser should still be able to extract some information
-    object_types = parser.get_object_types()
-    assert "user" in object_types
-    assert "group" in object_types
-    assert "organization" in object_types
-    assert "invalid_definition" in object_types

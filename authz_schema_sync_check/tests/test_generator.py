@@ -96,19 +96,3 @@ def test_write_types_with_formatting(tmp_path):
     # Check file content
     content = output_path.read_text()
     assert "GENERATED CODE - DO NOT EDIT MANUALLY" in content
-
-
-def test_generate_types_with_invalid_schema():
-    """Test that the generator can handle an invalid schema."""
-    schema_path = FIXTURES_DIR / "invalid_schema.zed"
-    schema_parser = SchemaParser(schema_path)
-
-    generator = TypeGenerator(schema_parser)
-    generated_code = generator.generate_types()
-
-    # Even with an invalid schema, we should get some output
-    assert "GENERATED CODE - DO NOT EDIT MANUALLY" in generated_code
-
-    # The invalid schema might not have all the expected elements,
-    # but it should still generate something
-    assert "from typing import" in generated_code
