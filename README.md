@@ -11,10 +11,7 @@ This package provides a pre-commit hook that generates type definitions from a S
 This package is built with Poetry and should be used with Poetry:
 
 ```bash
-# Add to your project
-poetry add --dev authz-schema-sync-check
-
-# Or for development
+# For development
 git clone https://github.com/yahiaosama/authz-schema-sync-check.git
 cd authz-schema-sync-check
 poetry install
@@ -43,27 +40,6 @@ repos:
         pass_filenames: false
 ```
 
-For local development with Poetry, use:
-
-```yaml
-repos:
-  - repo: local
-    hooks:
-      - id: authz-schema-sync-check
-        name: Check SpiceDB schema and models sync
-        entry: poetry run authz-schema-sync-check
-        language: system
-        args: [
-          "--schema", "path/to/schema.zed",
-          "--output", "path/to/resources.py",
-          "--verbose",
-          "--colorized-diff=true",
-          "--auto-fix"
-        ]
-        files: '\.zed$|resources\.py$'
-        pass_filenames: false
-```
-
 Available options:
 - `--schema`: Path to the schema.zed file (default: `schema.zed`)
 - `--output`: Path to the output resources.py file (default: `resources.py`)
@@ -72,8 +48,8 @@ Available options:
 - `--colorized-diff`: Enable or disable colorized diff output (true/false, default: true)
 
 The `files` pattern determines when the hook runs. In the example above, it will run whenever:
-- The schema.zed file is modified
-- The resources.py file is modified
+- The `schema.zed` file is modified
+- The `resources.py` file is modified
 
 **Important Note**: The hook will fail if the output file doesn't exist, even with `--auto-fix` enabled. With `--auto-fix`, it will create the file but still fail, requiring you to review and commit the newly created file in a separate step. This ensures that generated files are always explicitly committed.
 
@@ -356,12 +332,6 @@ def on_resource(resource: T) -> ResourceCheck[T]:
 
 ```bash
 poetry run pytest
-```
-
-### Building the Package
-
-```bash
-poetry build
 ```
 
 ## Troubleshooting
