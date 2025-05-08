@@ -74,8 +74,8 @@ poetry run authz-schema-sync-check --schema path/to/schema.zed --outputs \
 
 # Generate outputs with explicit templates
 poetry run authz-schema-sync-check --schema path/to/schema.zed --outputs \
-  "path/to/resources.py:types.py.jinja" \
-  "path/to/resources.ts:types.ts.jinja"
+  "path/to/resources.py:default_types.py.jinja" \
+  "path/to/resources.ts:default_types.ts.jinja"
 
 # Automatically apply changes
 poetry run authz-schema-sync-check --schema path/to/schema.zed --outputs \
@@ -102,8 +102,8 @@ Options:
 
 The package can generate type definitions in multiple languages based on the schema. The available templates are:
 
-- `types.py.jinja`: Generates Python type definitions
-- `types.ts.jinja`: Generates TypeScript type definitions
+- `default_types.py.jinja`: Generates Python type definitions
+- `default_types.ts.jinja`: Generates TypeScript type definitions
 
 You can also create your own templates in the `templates` directory.
 

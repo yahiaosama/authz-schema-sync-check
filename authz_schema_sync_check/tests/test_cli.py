@@ -24,11 +24,19 @@ def setup_cli_test(
     if schema_path is None:
         schema_path = FIXTURES_DIR / "valid_schema.zed"
     if output_mappings is None:
-        output_mappings = [("resources.py", "types.py.jinja")]
+        output_mappings = [
+            {
+                "output_path": Path("resources.py"),
+                "template_name": "default_types.py.jinja",
+            }
+        ]
 
     # Default args if none provided
     if args is None:
-        outputs_args = [f"{path}:{template}" for path, template in output_mappings]
+        outputs_args = [
+            f"{mapping['output_path']}:{mapping['template_name']}"
+            for mapping in output_mappings
+        ]
         args = ["check-schema", f"--schema={schema_path}", "--outputs"] + outputs_args
 
     # Mock sys.argv
@@ -40,9 +48,18 @@ def setup_cli_test(
     # Configure path_mock based on the test needs
     if isinstance(path_exists, bool):
         # Simple case: all paths have the same exists() result
-        path_instance = mocker.MagicMock()
-        path_instance.exists.return_value = path_exists
-        path_mock.return_value = path_instance
+        def path_side_effect(path_arg):
+            path_str = str(path_arg)
+            instance = mocker.MagicMock()
+            instance.exists.return_value = path_exists
+            # Set suffix based on file extension
+            if path_str.endswith(".py"):
+                instance.suffix = ".py"
+            elif path_str.endswith(".ts"):
+                instance.suffix = ".ts"
+            return instance
+
+        path_mock.side_effect = path_side_effect
     else:
         # Complex case: different paths have different exists() results
         # path_exists should be a dict mapping path strings to booleans
@@ -50,6 +67,11 @@ def setup_cli_test(
             path_str = str(path_arg)
             instance = mocker.MagicMock()
             instance.exists.return_value = path_exists.get(path_str, False)
+            # Set suffix based on file extension
+            if path_str.endswith(".py"):
+                instance.suffix = ".py"
+            elif path_str.endswith(".ts"):
+                instance.suffix = ".ts"
             return instance
 
         path_mock.side_effect = path_side_effect
@@ -129,7 +151,7 @@ def test_cli_with_auto_fix(mocker):
         "check-schema",
         f"--schema={FIXTURES_DIR / 'valid_schema.zed'}",
         "--outputs",
-        "resources.py:types.py.jinja",
+        "resources.py:default_types.py.jinja",
         "--auto-fix",
     ]
     setup_cli_test(mocker, args=args, has_diff=True, path_exists=True)
@@ -153,7 +175,7 @@ def test_cli_verbose(mocker):
         "check-schema",
         f"--schema={FIXTURES_DIR / 'valid_schema.zed'}",
         "--outputs",
-        "resources.py:types.py.jinja",
+        "resources.py:default_types.py.jinja",
         "--verbose",
     ]
     mocks = setup_cli_test(mocker, args=args, has_diff=False)
@@ -190,7 +212,7 @@ def test_cli_with_colorized_diff_enabled(mocker):
         "check-schema",
         f"--schema={FIXTURES_DIR / 'valid_schema.zed'}",
         "--outputs",
-        "resources.py:types.py.jinja",
+        "resources.py:default_types.py.jinja",
         "--colorized-diff=True",
     ]
     mocks = setup_cli_test(mocker, args=args, has_diff=True)
@@ -216,7 +238,7 @@ def test_cli_with_colorized_diff_disabled(mocker):
         "check-schema",
         f"--schema={FIXTURES_DIR / 'valid_schema.zed'}",
         "--outputs",
-        "resources.py:types.py.jinja",
+        "resources.py:default_types.py.jinja",
         "--colorized-diff=False",
     ]
     mocks = setup_cli_test(mocker, args=args, has_diff=True)
@@ -236,7 +258,12 @@ def test_cli_with_colorized_diff_disabled(mocker):
 def test_cli_nonexistent_output_fails(mocker):
     """Test that the CLI fails if the output file doesn't exist."""
     schema_path = FIXTURES_DIR / "valid_schema.zed"
-    output_mappings = [("nonexistent.py", "types.py.jinja")]
+    output_mappings = [
+        {
+            "output_path": Path("nonexistent.py"),
+            "template_name": "default_types.py.jinja",
+        }
+    ]
 
     # Setup test environment with schema exists but output doesn't
     path_exists = {str(schema_path): True, "nonexistent.py": False}
@@ -262,14 +289,19 @@ def test_cli_nonexistent_output_fails(mocker):
 def test_cli_nonexistent_output_with_auto_fix(mocker):
     """Test that the CLI creates a new file but still fails if the output file doesn't exist and --auto-fix is used."""
     schema_path = FIXTURES_DIR / "valid_schema.zed"
-    output_mappings = [("nonexistent.py", "types.py.jinja")]
+    output_mappings = [
+        {
+            "output_path": Path("nonexistent.py"),
+            "template_name": "default_types.py.jinja",
+        }
+    ]
 
     # Setup test environment with schema exists but output doesn't, and --auto-fix
     args = [
         "check-schema",
         f"--schema={schema_path}",
         "--outputs",
-        "nonexistent.py:types.py.jinja",
+        "nonexistent.py:default_types.py.jinja",
         "--auto-fix",
     ]
     path_exists = {str(schema_path): True, "nonexistent.py": False}
@@ -297,8 +329,14 @@ def test_cli_multiple_outputs(mocker):
     """Test that the CLI handles multiple outputs correctly."""
     # Setup test environment with multiple outputs
     output_mappings = [
-        ("resources.py", "types.py.jinja"),
-        ("resources.ts", "types.ts.jinja"),
+        {
+            "output_path": Path("resources.py"),
+            "template_name": "default_types.py.jinja",
+        },
+        {
+            "output_path": Path("resources.ts"),
+            "template_name": "default_types.ts.jinja",
+        },
     ]
     mocks = setup_cli_test(mocker, output_mappings=output_mappings, has_diff=False)
 
@@ -374,7 +412,7 @@ def test_cli_with_mixed_templates(mocker):
         "check-schema",
         f"--schema={FIXTURES_DIR / 'valid_schema.zed'}",
         "--outputs",
-        "resources.py:types.py.jinja",  # Explicit template
+        "resources.py:default_types.py.jinja",  # Explicit template
         "resources.ts",  # Inferred template
     ]
     mocks = setup_cli_test(mocker, args=args, has_diff=False)
@@ -409,7 +447,9 @@ def test_cli_with_unsupported_extension(mocker):
 def test_cli_template_not_found(mocker):
     """Test that the CLI handles template not found correctly."""
     # Setup test environment with nonexistent template
-    output_mappings = [("resources.py", "nonexistent.jinja")]
+    output_mappings = [
+        {"output_path": Path("resources.py"), "template_name": "nonexistent.jinja"}
+    ]
     mocks = setup_cli_test(mocker, output_mappings=output_mappings)
 
     # Mock generate_code to raise TemplateNotFound

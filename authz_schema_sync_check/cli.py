@@ -5,7 +5,7 @@ Command-line interface for the pre-commit hook.
 import argparse
 import sys
 from pathlib import Path
-from typing import TypedDict, List, Tuple, Optional
+from typing import TypedDict
 import colorama
 import jinja2
 
@@ -20,11 +20,18 @@ class ProcessResult(TypedDict):
     output_path: Path
     template_name: str
     success: bool
-    error: Optional[str]
+    error: str | None
     has_diff: bool
     diff_output: str
     created: bool
     updated: bool
+
+
+class ValidMapping(TypedDict):
+    """Valid output mapping."""
+
+    output_path: Path
+    template_name: str
 
 
 class InvalidMapping(TypedDict):
@@ -165,8 +172,8 @@ def process_output_mapping(
 
 
 def parse_output_mappings(
-    mappings: List[str],
-) -> Tuple[List[Tuple[Path, str]], List[InvalidMapping]]:
+    mappings: list[str],
+) -> tuple[list[ValidMapping], list[InvalidMapping]]:
     """
     Parse output mappings from command line arguments.
 
@@ -177,15 +184,20 @@ def parse_output_mappings(
     Returns:
         Tuple of (valid_mappings, invalid_mappings)
     """
-    valid_mappings: List[Tuple[Path, str]] = []
-    invalid_mappings: List[InvalidMapping] = []
+    valid_mappings: list[ValidMapping] = []
+    invalid_mappings: list[InvalidMapping] = []
 
     for mapping in mappings:
         if ":" in mapping:
             # Explicit template specified
             try:
                 output_path_str, template_name = mapping.split(":", 1)
-                valid_mappings.append((Path(output_path_str), template_name))
+                valid_mappings.append(
+                    {
+                        "output_path": Path(output_path_str),
+                        "template_name": template_name,
+                    }
+                )
             except ValueError:
                 invalid_mappings.append(
                     {
@@ -198,10 +210,14 @@ def parse_output_mappings(
             path_obj = Path(mapping)
             if path_obj.suffix == ".py":
                 template_name = "default_types.py.jinja"
-                valid_mappings.append((path_obj, template_name))
+                valid_mappings.append(
+                    {"output_path": path_obj, "template_name": template_name}
+                )
             elif path_obj.suffix == ".ts":
                 template_name = "default_types.ts.jinja"
-                valid_mappings.append((path_obj, template_name))
+                valid_mappings.append(
+                    {"output_path": path_obj, "template_name": template_name}
+                )
             else:
                 invalid_mappings.append(
                     {
@@ -336,13 +352,13 @@ def main():
             return 1
 
         # Process each output mapping and collect results
-        results: List[ProcessResult] = []
+        results: list[ProcessResult] = []
 
-        for output_path, template_name in valid_mappings:
+        for mapping in valid_mappings:
             result = process_output_mapping(
                 schema_parser=schema_parser,
-                output_path=output_path,
-                template_name=template_name,
+                output_path=mapping["output_path"],
+                template_name=mapping["template_name"],
                 auto_fix=args.auto_fix,
                 verbose=args.verbose,
                 colorized_diff=args.colorized_diff,

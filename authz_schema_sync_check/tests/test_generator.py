@@ -30,7 +30,7 @@ def test_generate_code_python():
     generator = TypeGenerator(schema_parser)
 
     # Test Python template
-    py_code = generator.generate_code("types.py.jinja")
+    py_code = generator.generate_code("default_types.py.jinja")
 
     # Check that the generated code includes expected elements
     assert "class User" in py_code
@@ -51,7 +51,7 @@ def test_generate_code_typescript():
     generator = TypeGenerator(schema_parser)
 
     # Test TypeScript template
-    ts_code = generator.generate_code("types.ts.jinja")
+    ts_code = generator.generate_code("default_types.ts.jinja")
 
     # Check that the generated code includes expected elements
     assert "type ResourcePermissionDefinition =" in ts_code
@@ -74,7 +74,7 @@ def test_write_code(tmp_path):
 
     # Write Python code to a temporary file
     py_output_path = tmp_path / "resources.py"
-    generator.write_code(py_output_path, "types.py.jinja")
+    generator.write_code(py_output_path, "default_types.py.jinja")
 
     # Check that the file exists and contains the generated code
     assert py_output_path.exists()
@@ -84,7 +84,7 @@ def test_write_code(tmp_path):
 
     # Write TypeScript code to a temporary file
     ts_output_path = tmp_path / "resources.ts"
-    generator.write_code(ts_output_path, "types.ts.jinja")
+    generator.write_code(ts_output_path, "default_types.ts.jinja")
 
     # Check that the file exists and contains the generated code
     assert ts_output_path.exists()
@@ -117,7 +117,7 @@ def test_format_with_ruff():
     generator._format_with_ruff = mock_format
 
     # Generate Python code
-    generator.generate_code("types.py.jinja")
+    generator.generate_code("default_types.py.jinja")
 
     # Verify formatting was applied
     assert format_called
@@ -126,7 +126,7 @@ def test_format_with_ruff():
     format_called = False
 
     # Generate TypeScript code (should not be formatted)
-    generator.generate_code("types.ts.jinja")
+    generator.generate_code("default_types.ts.jinja")
 
     # Verify formatting was not applied
     assert not format_called
