@@ -7,7 +7,7 @@
  * Type representing all valid resource-permission combinations
  * from the SpiceDB schema.
  */
-export type ResourcePermission = 
+export type ResourcePermission =
 {% for object_type in object_types %}
 {% if permissions.get(object_type) %}
   | { resource: "{{ object_type }}"; permission: {% for perm in permissions.get(object_type) %}"{{ perm }}"{% if not loop.last %} | {% endif %}{% endfor %}; resourceId: string | number }
