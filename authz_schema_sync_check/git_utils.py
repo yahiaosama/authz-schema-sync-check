@@ -24,13 +24,9 @@ def get_diff(file_path: Path, content: str) -> Tuple[bool, str]:
     # Read existing content
     existing_content = file_path.read_text()
 
-    # Compare content
-    if existing_content == content:
-        return False, ""
-
     # Generate unified diff
-    existing_lines = existing_content.splitlines(keepends=True)
-    new_lines = content.splitlines(keepends=True)
+    existing_lines = existing_content.splitlines(keepends=False)
+    new_lines = content.splitlines(keepends=False)
 
     diff = difflib.unified_diff(
         existing_lines,
