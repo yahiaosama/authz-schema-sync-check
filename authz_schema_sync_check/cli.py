@@ -5,11 +5,33 @@ Command-line interface for the pre-commit hook.
 import argparse
 import sys
 from pathlib import Path
+from typing import TypedDict, List, Tuple, Optional
 import colorama
+import jinja2
 
 from .parser import SchemaParser
 from .generator import TypeGenerator
 from .git_utils import get_diff, apply_changes
+
+
+class ProcessResult(TypedDict):
+    """Result of processing an output mapping."""
+
+    output_path: Path
+    template_name: str
+    success: bool
+    error: Optional[str]
+    has_diff: bool
+    diff_output: str
+    created: bool
+    updated: bool
+
+
+class InvalidMapping(TypedDict):
+    """Invalid output mapping."""
+
+    mapping: str
+    reason: str
 
 
 def colorize_diff(diff_text: str) -> str:
@@ -52,6 +74,185 @@ def colorize_diff(diff_text: str) -> str:
     return "\n".join(colorized_lines)
 
 
+def process_output_mapping(
+    schema_parser: SchemaParser,
+    output_path: Path,
+    template_name: str,
+    auto_fix: bool,
+    verbose: bool,
+    colorized_diff: bool,
+) -> ProcessResult:
+    """
+    Process a single output mapping.
+
+    Args:
+        schema_parser: The schema parser
+        output_path: Path to the output file
+        template_name: Name of the template to use
+        auto_fix: Whether to automatically fix issues
+        verbose: Whether to print verbose output
+        colorized_diff: Whether to colorize diff output
+
+    Returns:
+        A ProcessResult containing the result of processing
+    """
+    result: ProcessResult = {
+        "output_path": output_path,
+        "template_name": template_name,
+        "success": False,
+        "error": None,
+        "has_diff": False,
+        "diff_output": "",
+        "created": False,
+        "updated": False,
+    }
+
+    # Create generator
+    generator = TypeGenerator(schema_parser)
+
+    # Generate content
+    try:
+        generated_content = generator.generate_code(template_name)
+    except jinja2.exceptions.TemplateNotFound:
+        result["error"] = f"Template '{template_name}' not found"
+        return result
+    except Exception as e:
+        result["error"] = f"Error generating code: {e}"
+        return result
+
+    # Check if output file exists
+    if not output_path.exists():
+        if auto_fix:
+            try:
+                apply_changes(output_path, generated_content)
+                result["created"] = True
+                # Always mark as unsuccessful even though we created the file
+                # This ensures the user must manually add the file to git
+                result["success"] = False
+                result["error"] = "Output file did not exist but has been created"
+            except Exception as e:
+                result["error"] = f"Error creating file: {e}"
+        else:
+            result["error"] = "Output file does not exist"
+        return result
+
+    # Compare with existing file
+    try:
+        has_diff, diff_output = get_diff(output_path, generated_content)
+        result["has_diff"] = has_diff
+        result["diff_output"] = diff_output
+
+        if has_diff:
+            if auto_fix:
+                try:
+                    apply_changes(output_path, generated_content)
+                    result["updated"] = True
+                    result["success"] = True
+                except Exception as e:
+                    result["error"] = f"Error updating file: {e}"
+                    return result
+            else:
+                result["error"] = "File is out of sync with schema"
+                return result
+
+        # If we got here and there's no diff, the operation was successful
+        result["success"] = True
+        return result
+
+    except Exception as e:
+        result["error"] = f"Error comparing files: {e}"
+        return result
+
+
+def parse_output_mappings(
+    mappings: List[str],
+) -> Tuple[List[Tuple[Path, str]], List[InvalidMapping]]:
+    """
+    Parse output mappings from command line arguments.
+
+    Args:
+        mappings: List of mapping strings in format 'output_path:template_name'
+
+    Returns:
+        Tuple of (valid_mappings, invalid_mappings)
+    """
+    valid_mappings: List[Tuple[Path, str]] = []
+    invalid_mappings: List[InvalidMapping] = []
+
+    for mapping in mappings:
+        try:
+            output_path, template_name = mapping.split(":", 1)
+            valid_mappings.append((Path(output_path), template_name))
+        except ValueError:
+            invalid_mappings.append(
+                {
+                    "mapping": mapping,
+                    "reason": "Invalid format. Should be 'output_path:template_name'",
+                }
+            )
+
+    return valid_mappings, invalid_mappings
+
+
+def report_result(result: ProcessResult, verbose: bool, colorized_diff: bool) -> None:
+    """
+    Report the result of processing an output mapping.
+
+    Args:
+        result: The ProcessResult
+        verbose: Whether to print verbose output
+        colorized_diff: Whether to colorize diff output
+    """
+    output_path = result["output_path"]
+    template_name = result["template_name"]
+
+    if result["created"]:
+        # Always report created files, even if the operation is marked as unsuccessful
+        if verbose:
+            print(
+                f"{colorama.Fore.CYAN}Created new file: {output_path} (using template: {template_name}){colorama.Style.RESET_ALL}"
+            )
+        print(
+            f"{colorama.Fore.YELLOW}Please review and commit the newly created file: {output_path}{colorama.Style.RESET_ALL}",
+            file=sys.stderr,
+        )
+
+    if result["success"]:
+        if result["updated"]:
+            if verbose:
+                print(
+                    f"{colorama.Fore.YELLOW}Updated file: {output_path}{colorama.Style.RESET_ALL}"
+                )
+        elif not result["has_diff"]:
+            if verbose:
+                print(
+                    f"{colorama.Fore.GREEN}File {output_path} is in sync!{colorama.Style.RESET_ALL}"
+                )
+    else:
+        print(
+            f"{colorama.Fore.RED}Error processing {output_path}: {result['error']}{colorama.Style.RESET_ALL}",
+            file=sys.stderr,
+        )
+
+        if result["has_diff"] and result["diff_output"]:
+            print("\nDiff:", file=sys.stderr)
+            if colorized_diff:
+                print(colorize_diff(result["diff_output"]), file=sys.stderr)
+            else:
+                print(result["diff_output"], file=sys.stderr)
+
+        if not result["created"] and not output_path.exists():
+            print(
+                f"\nRun with {colorama.Fore.YELLOW}--auto-fix{colorama.Style.RESET_ALL} to create the file",
+                file=sys.stderr,
+            )
+        elif result["has_diff"] and not result["updated"]:
+            print(
+                f"\nRun with {colorama.Fore.YELLOW}--auto-fix{colorama.Style.RESET_ALL} to update the file",
+                file=sys.stderr,
+            )
+
+
 def main():
     """
     Main entry point for the CLI.
@@ -69,10 +270,11 @@ def main():
         "--schema", type=str, default="schema.zed", help="Path to the schema.zed file"
     )
     parser.add_argument(
-        "--output",
+        "--outputs",
         type=str,
-        default="models.py",
-        help="Path to the output models.py file",
+        nargs="+",
+        help="Output mappings in format 'output_path:template_name'",
+        required=True,
     )
     parser.add_argument(
         "--auto-fix",
@@ -90,81 +292,51 @@ def main():
     args = parser.parse_args()
 
     schema_path = Path(args.schema)
-    output_path = Path(args.output)
 
     if not schema_path.exists():
         print(f"Error: Schema file '{schema_path}' does not exist", file=sys.stderr)
         return 1
 
     try:
-        # Parse schema and generate types
+        # Parse schema
         schema_parser = SchemaParser(schema_path)
-        generator = TypeGenerator(schema_parser)
-        generated_content = generator.generate_types()
 
-        # Check if output file exists
-        if not output_path.exists():
-            if args.auto_fix:
-                if args.verbose:
-                    print(
-                        f"{colorama.Fore.CYAN}Creating new file: {output_path}{colorama.Style.RESET_ALL}"
-                    )
-                apply_changes(output_path, generated_content)
+        # Parse output mappings
+        valid_mappings, invalid_mappings = parse_output_mappings(args.outputs)
+
+        # Report invalid mappings
+        if invalid_mappings:
+            for invalid in invalid_mappings:
                 print(
-                    f"{colorama.Fore.RED}Error: Output file '{output_path}' did not exist but has been created{colorama.Style.RESET_ALL}",
+                    f"{colorama.Fore.RED}Error in mapping '{invalid['mapping']}': {invalid['reason']}{colorama.Style.RESET_ALL}",
                     file=sys.stderr,
                 )
-                print(
-                    f"{colorama.Fore.YELLOW}Please review and commit the newly created file{colorama.Style.RESET_ALL}",
-                    file=sys.stderr,
-                )
-            else:
-                print(
-                    f"{colorama.Fore.RED}Error: Output file '{output_path}' does not exist{colorama.Style.RESET_ALL}",
-                    file=sys.stderr,
-                )
-                print(
-                    f"\nRun with {colorama.Fore.YELLOW}--auto-fix{colorama.Style.RESET_ALL} to create the file",
-                    file=sys.stderr,
-                )
-            return 1  # Always return error code
-
-        # Compare with existing file
-        has_diff, diff_output = get_diff(output_path, generated_content)
-
-        if not has_diff:
-            if args.verbose:
-                print(
-                    f"{colorama.Fore.GREEN}Files are in sync!{colorama.Style.RESET_ALL}"
-                )
-            return 0
-
-        # Handle differences
-        if args.auto_fix:
-            if args.verbose:
-                print(
-                    f"{colorama.Fore.YELLOW}Updating {output_path}{colorama.Style.RESET_ALL}"
-                )
-            apply_changes(output_path, generated_content)
-            return 0
-        else:
-            print(
-                f"{colorama.Fore.RED}Error: {output_path} is out of sync with {schema_path}{colorama.Style.RESET_ALL}",
-                file=sys.stderr,
-            )
-            print("\nDiff:", file=sys.stderr)
-
-            # Apply colorization if enabled
-            if args.colorized_diff:
-                print(colorize_diff(diff_output), file=sys.stderr)
-            else:
-                print(diff_output, file=sys.stderr)
-
-            print(
-                f"\nRun with {colorama.Fore.YELLOW}--auto-fix{colorama.Style.RESET_ALL} to update the file",
-                file=sys.stderr,
-            )
             return 1
+
+        # Process each output mapping and collect results
+        results: List[ProcessResult] = []
+
+        for output_path, template_name in valid_mappings:
+            result = process_output_mapping(
+                schema_parser=schema_parser,
+                output_path=output_path,
+                template_name=template_name,
+                auto_fix=args.auto_fix,
+                verbose=args.verbose,
+                colorized_diff=args.colorized_diff,
+            )
+            results.append(result)
+
+        # Report results
+        for result in results:
+            report_result(
+                result=result, verbose=args.verbose, colorized_diff=args.colorized_diff
+            )
+
+        # Return error code if any errors were encountered
+        has_errors = any(not result["success"] for result in results)
+        return 1 if has_errors else 0
+
     except Exception as e:
         print(
             f"{colorama.Fore.RED}Error: {e}{colorama.Style.RESET_ALL}", file=sys.stderr

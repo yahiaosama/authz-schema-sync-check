@@ -22,54 +22,75 @@ def test_generator_initialization():
     assert generator.schema_parser == schema_parser
 
 
-def test_generate_types():
-    """Test that the generator can generate type definitions from a schema."""
+def test_generate_code_python():
+    """Test that the generator can generate Python code from a template."""
     schema_path = FIXTURES_DIR / "valid_schema.zed"
     schema_parser = SchemaParser(schema_path)
 
     generator = TypeGenerator(schema_parser)
-    generated_code = generator.generate_types()
+
+    # Test Python template
+    py_code = generator.generate_code("types.py.jinja")
 
     # Check that the generated code includes expected elements
-    assert "class User" in generated_code
-    assert "class Group" in generated_code
-    assert "class Organization" in generated_code
-
-    # Check for permission literals
-    assert "GroupPermission = Literal" in generated_code
-    assert "OrganizationPermission = Literal" in generated_code
-
-    # Check for relation literals
-    assert "GroupRelation = Literal" in generated_code
-    assert "OrganizationRelation = Literal" in generated_code
-
-    # Check for type variables
-    assert "T = TypeVar" in generated_code
+    assert "class User" in py_code
+    assert "class Group" in py_code
+    assert "class Organization" in py_code
+    assert "GroupPermission = Literal" in py_code
+    assert "OrganizationPermission = Literal" in py_code
+    assert "GroupRelation = Literal" in py_code
+    assert "OrganizationRelation = Literal" in py_code
+    assert "T = TypeVar" in py_code
 
 
-def test_write_types(tmp_path):
-    """Test that the generator can write type definitions to a file."""
+def test_generate_code_typescript():
+    """Test that the generator can generate TypeScript code from a template."""
     schema_path = FIXTURES_DIR / "valid_schema.zed"
     schema_parser = SchemaParser(schema_path)
 
     generator = TypeGenerator(schema_parser)
 
-    # Write to a temporary file
-    output_path = tmp_path / "models.py"
-    generator.write_types(output_path)
+    # Test TypeScript template
+    ts_code = generator.generate_code("types.ts.jinja")
+
+    # Check that the generated code includes expected elements
+    assert "export type ResourcePermission =" in ts_code
+    assert "export type UserPermission =" in ts_code
+    assert "export type GroupPermission =" in ts_code
+    assert "export type OrganizationPermission =" in ts_code
+    assert "export type ResourceType =" in ts_code
+
+
+def test_write_code(tmp_path):
+    """Test that the generator can write code to a file using a specific template."""
+    schema_path = FIXTURES_DIR / "valid_schema.zed"
+    schema_parser = SchemaParser(schema_path)
+
+    generator = TypeGenerator(schema_parser)
+
+    # Write Python code to a temporary file
+    py_output_path = tmp_path / "resources.py"
+    generator.write_code(py_output_path, "types.py.jinja")
 
     # Check that the file exists and contains the generated code
-    assert output_path.exists()
+    assert py_output_path.exists()
+    py_content = py_output_path.read_text()
+    assert "GENERATED CODE - DO NOT EDIT MANUALLY" in py_content
+    assert "class User" in py_content
 
-    content = output_path.read_text()
-    assert "GENERATED CODE - DO NOT EDIT MANUALLY" in content
-    assert "class User" in content
-    assert "class Group" in content
-    assert "class Organization" in content
+    # Write TypeScript code to a temporary file
+    ts_output_path = tmp_path / "resources.ts"
+    generator.write_code(ts_output_path, "types.ts.jinja")
+
+    # Check that the file exists and contains the generated code
+    assert ts_output_path.exists()
+    ts_content = ts_output_path.read_text()
+    assert "GENERATED CODE - DO NOT EDIT MANUALLY" in ts_content
+    assert "export type ResourcePermission =" in ts_content
 
 
-def test_write_types_with_formatting(tmp_path):
-    """Test that the generator writes formatted code to a file."""
+def test_format_with_ruff():
+    """Test that the generator formats Python code with ruff but not TypeScript code."""
     schema_path = FIXTURES_DIR / "valid_schema.zed"
     schema_parser = SchemaParser(schema_path)
 
@@ -86,13 +107,17 @@ def test_write_types_with_formatting(tmp_path):
 
     generator._format_with_ruff = mock_format
 
-    # Write to a temporary file
-    output_path = tmp_path / "models.py"
-    generator.write_types(output_path)
+    # Generate Python code
+    generator.generate_code("types.py.jinja")
 
     # Verify formatting was applied
     assert format_called
 
-    # Check file content
-    content = output_path.read_text()
-    assert "GENERATED CODE - DO NOT EDIT MANUALLY" in content
+    # Reset mock
+    format_called = False
+
+    # Generate TypeScript code (should not be formatted)
+    generator.generate_code("types.ts.jinja")
+
+    # Verify formatting was not applied
+    assert not format_called

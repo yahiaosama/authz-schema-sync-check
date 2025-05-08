@@ -17,18 +17,19 @@ def setup_cli_test(
     path_exists=True,
     has_diff=False,
     schema_path=None,
-    output_path=None,
+    output_mappings=None,
 ):
     """Set up common test environment for CLI tests."""
     # Default paths if none provided
     if schema_path is None:
         schema_path = FIXTURES_DIR / "valid_schema.zed"
-    if output_path is None:
-        output_path = Path("models.py")
+    if output_mappings is None:
+        output_mappings = [("resources.py", "types.py.jinja")]
 
     # Default args if none provided
     if args is None:
-        args = ["check-schema", f"--schema={schema_path}", f"--output={output_path}"]
+        outputs_args = [f"{path}:{template}" for path, template in output_mappings]
+        args = ["check-schema", f"--schema={schema_path}", "--outputs"] + outputs_args
 
     # Mock sys.argv
     mocker.patch("sys.argv", args)
@@ -56,7 +57,7 @@ def setup_cli_test(
     # Mock SchemaParser and TypeGenerator
     mocker.patch("authz_schema_sync_check.cli.SchemaParser")
     mocker.patch(
-        "authz_schema_sync_check.cli.TypeGenerator.generate_types",
+        "authz_schema_sync_check.cli.TypeGenerator.generate_code",
         return_value="generated content",
     )
 
@@ -72,7 +73,7 @@ def setup_cli_test(
 
     return {
         "schema_path": schema_path,
-        "output_path": output_path,
+        "output_mappings": output_mappings,
         "path_mock": path_mock,
         "mock_get_diff": mock_get_diff,
         "mock_stderr": mock_stderr,
@@ -123,13 +124,15 @@ def test_cli_with_diff(mocker):
 def test_cli_with_auto_fix(mocker):
     """Test that the CLI returns 0 when there's a diff but --auto-fix is used."""
     # Setup test environment with a diff and auto-fix
+    # The file exists but has a diff
     args = [
         "check-schema",
         f"--schema={FIXTURES_DIR / 'valid_schema.zed'}",
-        "--output=models.py",
+        "--outputs",
+        "resources.py:types.py.jinja",
         "--auto-fix",
     ]
-    setup_cli_test(mocker, args=args, has_diff=True)
+    setup_cli_test(mocker, args=args, has_diff=True, path_exists=True)
 
     # Mock apply_changes
     mock_apply_changes = mocker.patch("authz_schema_sync_check.cli.apply_changes")
@@ -149,7 +152,8 @@ def test_cli_verbose(mocker):
     args = [
         "check-schema",
         f"--schema={FIXTURES_DIR / 'valid_schema.zed'}",
-        "--output=models.py",
+        "--outputs",
+        "resources.py:types.py.jinja",
         "--verbose",
     ]
     mocks = setup_cli_test(mocker, args=args, has_diff=False)
@@ -185,7 +189,8 @@ def test_cli_with_colorized_diff_enabled(mocker):
     args = [
         "check-schema",
         f"--schema={FIXTURES_DIR / 'valid_schema.zed'}",
-        "--output=models.py",
+        "--outputs",
+        "resources.py:types.py.jinja",
         "--colorized-diff=True",
     ]
     mocks = setup_cli_test(mocker, args=args, has_diff=True)
@@ -210,7 +215,8 @@ def test_cli_with_colorized_diff_disabled(mocker):
     args = [
         "check-schema",
         f"--schema={FIXTURES_DIR / 'valid_schema.zed'}",
-        "--output=models.py",
+        "--outputs",
+        "resources.py:types.py.jinja",
         "--colorized-diff=False",
     ]
     mocks = setup_cli_test(mocker, args=args, has_diff=True)
@@ -230,14 +236,14 @@ def test_cli_with_colorized_diff_disabled(mocker):
 def test_cli_nonexistent_output_fails(mocker):
     """Test that the CLI fails if the output file doesn't exist."""
     schema_path = FIXTURES_DIR / "valid_schema.zed"
-    output_path = Path("nonexistent.py")
+    output_mappings = [("nonexistent.py", "types.py.jinja")]
 
     # Setup test environment with schema exists but output doesn't
-    path_exists = {str(schema_path): True, str(output_path): False}
+    path_exists = {str(schema_path): True, "nonexistent.py": False}
     mocks = setup_cli_test(
         mocker,
         schema_path=schema_path,
-        output_path=output_path,
+        output_mappings=output_mappings,
         path_exists=path_exists,
     )
 
@@ -256,21 +262,22 @@ def test_cli_nonexistent_output_fails(mocker):
 def test_cli_nonexistent_output_with_auto_fix(mocker):
     """Test that the CLI creates a new file but still fails if the output file doesn't exist and --auto-fix is used."""
     schema_path = FIXTURES_DIR / "valid_schema.zed"
-    output_path = Path("nonexistent.py")
+    output_mappings = [("nonexistent.py", "types.py.jinja")]
 
     # Setup test environment with schema exists but output doesn't, and --auto-fix
     args = [
         "check-schema",
         f"--schema={schema_path}",
-        f"--output={output_path}",
+        "--outputs",
+        "nonexistent.py:types.py.jinja",
         "--auto-fix",
     ]
-    path_exists = {str(schema_path): True, str(output_path): False}
+    path_exists = {str(schema_path): True, "nonexistent.py": False}
     mocks = setup_cli_test(
         mocker,
         args=args,
         schema_path=schema_path,
-        output_path=output_path,
+        output_mappings=output_mappings,
         path_exists=path_exists,
     )
 
@@ -281,6 +288,66 @@ def test_cli_nonexistent_output_with_auto_fix(mocker):
     result = main()
 
     # Assertions
-    assert result == 1  # Should still fail
+    assert result == 1  # Should fail even with --auto-fix when creating a new file
     mock_apply_changes.assert_called_once()  # Should create file with --auto-fix
     mocks["mock_stderr"].write.assert_called()  # Should write error message
+
+
+def test_cli_multiple_outputs(mocker):
+    """Test that the CLI handles multiple outputs correctly."""
+    # Setup test environment with multiple outputs
+    output_mappings = [
+        ("resources.py", "types.py.jinja"),
+        ("resources.ts", "types.ts.jinja"),
+    ]
+    mocks = setup_cli_test(mocker, output_mappings=output_mappings, has_diff=False)
+
+    # Run the test
+    result = main()
+
+    # Assertions
+    assert result == 0
+    mocks["mock_stderr"].write.assert_not_called()
+
+
+def test_cli_invalid_output_mapping(mocker):
+    """Test that the CLI handles invalid output mappings correctly."""
+    # Setup test environment with invalid output mapping
+    args = [
+        "check-schema",
+        f"--schema={FIXTURES_DIR / 'valid_schema.zed'}",
+        "--outputs",
+        "invalid_mapping",
+    ]
+    mocks = setup_cli_test(mocker, args=args)
+
+    # Run the test
+    result = main()
+
+    # Assertions
+    assert result == 1
+    mocks["mock_stderr"].write.assert_called()
+
+
+def test_cli_template_not_found(mocker):
+    """Test that the CLI handles template not found correctly."""
+    # Setup test environment with nonexistent template
+    output_mappings = [("resources.py", "nonexistent.jinja")]
+    mocks = setup_cli_test(mocker, output_mappings=output_mappings)
+
+    # Mock generate_code to raise TemplateNotFound
+    import jinja2
+
+    mock_generate_code = mocker.patch(
+        "authz_schema_sync_check.cli.TypeGenerator.generate_code"
+    )
+    mock_generate_code.side_effect = jinja2.exceptions.TemplateNotFound(
+        "nonexistent.jinja"
+    )
+
+    # Run the test
+    result = main()
+
+    # Assertions
+    assert result == 1
+    mocks["mock_stderr"].write.assert_called()
