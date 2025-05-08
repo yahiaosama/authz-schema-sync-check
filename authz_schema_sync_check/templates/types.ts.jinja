@@ -1,0 +1,29 @@
+/**
+ * GENERATED CODE - DO NOT EDIT MANUALLY
+ * This file is generated from schema.zed and should not be modified directly.
+ */
+
+/**
+ * Type representing all valid resource-permission combinations
+ * from the SpiceDB schema.
+ */
+export type ResourcePermission =
+{% for object_type in object_types %}
+{% if permissions.get(object_type) %}
+  | { resource: "{{ object_type }}"; permission: {% for perm in permissions.get(object_type) %}"{{ perm }}"{% if not loop.last %} | {% endif %}{% endfor %} }
+{% endif %}
+{% endfor %};
+
+{% for object_type, perms in permissions.items() %}
+{% if perms %}
+/**
+ * Type for {{ object_type }} permissions
+ */
+export type {{ object_type|capitalize }}Permission = {% for perm in perms %}"{{ perm }}"{% if not loop.last %} | {% endif %}{% endfor %};
+{% endif %}
+{% endfor %}
+
+/**
+ * Type for all resource types
+ */
+export type ResourceType = {% for object_type in object_types %}"{{ object_type }}"{% if not loop.last %} | {% endif %}{% endfor %};
