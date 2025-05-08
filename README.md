@@ -379,42 +379,13 @@ The TypeScript template generates a discriminated union type that represents all
  */
 
 /**
- * Base type defining all valid resource and permission combinations
- * extracted from the SpiceDB schema. This is used as the foundation
- * for the ResourcePermission type.
- */
-type ResourcePermissionDefinition = 
-  | { resource: "user"; permission: "read" | "update" | "make_admin" | "revoke_admin" }
-  | { resource: "group"; permission: "edit_members" }
-  | { resource: "organization"; permission: "administrate" | "read" };
-
-/**
  * Type representing all valid resource-permission combinations
  * from the SpiceDB schema.
  */
-export type ResourcePermission = ResourcePermissionDefinition & {
-  resourceId: string | number;
-};
-
-/**
- * Type for user permissions
- */
-export type UserPermission = "read" | "update" | "make_admin" | "revoke_admin";
-
-/**
- * Type for group permissions
- */
-export type GroupPermission = "edit_members";
-
-/**
- * Type for organization permissions
- */
-export type OrganizationPermission = "administrate" | "read";
-
-/**
- * Type for all resource types
- */
-export type ResourceType = "user" | "group" | "organization";
+export type ResourcePermission = 
+  | { resource: "user"; permission: "read" | "update" | "make_admin" | "revoke_admin"; resourceId: string | number }
+  | { resource: "group"; permission: "edit_members"; resourceId: string | number }
+  | { resource: "organization"; permission: "administrate" | "read"; resourceId: string | number };
 ```
 
 This TypeScript type ensures that only valid resource-permission combinations can be used at compile time. For example:

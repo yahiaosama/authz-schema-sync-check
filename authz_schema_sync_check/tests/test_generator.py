@@ -54,15 +54,17 @@ def test_generate_code_typescript():
     ts_code = generator.generate_code("default_types.ts.jinja")
 
     # Check that the generated code includes expected elements
-    assert "type ResourcePermissionDefinition =" in ts_code
+    assert "export type ResourcePermission =" in ts_code
+
+    # Check that each resource type has the correct permissions
     assert (
-        "export type ResourcePermission = ResourcePermissionDefinition & {" in ts_code
+        'resource: "user"; permission: "read" | "update" | "make_admin" | "revoke_admin"'
+        in ts_code
     )
-    assert "resourceId: string | number;" in ts_code
-    assert "export type UserPermission =" in ts_code
-    assert "export type GroupPermission =" in ts_code
-    assert "export type OrganizationPermission =" in ts_code
-    assert "export type ResourceType =" in ts_code
+    assert 'resource: "group"; permission: "edit_members"' in ts_code
+    assert 'resource: "organization"; permission: "administrate" | "read"' in ts_code
+
+    assert "resourceId: string | number" in ts_code
 
 
 def test_write_code(tmp_path):
@@ -90,12 +92,17 @@ def test_write_code(tmp_path):
     assert ts_output_path.exists()
     ts_content = ts_output_path.read_text()
     assert "GENERATED CODE - DO NOT EDIT MANUALLY" in ts_content
-    assert "type ResourcePermissionDefinition =" in ts_content
+    assert "export type ResourcePermission =" in ts_content
+
+    # Check that each resource type has the correct permissions
     assert (
-        "export type ResourcePermission = ResourcePermissionDefinition & {"
+        'resource: "user"; permission: "read" | "update" | "make_admin" | "revoke_admin"'
         in ts_content
     )
-    assert "resourceId: string | number;" in ts_content
+    assert 'resource: "group"; permission: "edit_members"' in ts_content
+    assert 'resource: "organization"; permission: "administrate" | "read"' in ts_content
+
+    assert "resourceId: string | number" in ts_content
 
 
 def test_format_with_ruff():

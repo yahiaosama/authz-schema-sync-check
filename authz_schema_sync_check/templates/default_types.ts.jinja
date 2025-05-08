@@ -4,35 +4,12 @@
  */
 
 /**
- * Base type defining all valid resource and permission combinations
- * extracted from the SpiceDB schema. This is used as the foundation
- * for the ResourcePermission type.
- */
-type ResourcePermissionDefinition = 
-{% for object_type in object_types %}
-{% if permissions.get(object_type) %}
-  | { resource: "{{ object_type }}"; permission: {% for perm in permissions.get(object_type) %}"{{ perm }}"{% if not loop.last %} | {% endif %}{% endfor %} }
-{% endif %}
-{% endfor %};
-
-/**
  * Type representing all valid resource-permission combinations
  * from the SpiceDB schema.
  */
-export type ResourcePermission = ResourcePermissionDefinition & {
-  resourceId: string | number;
-};
-
-{% for object_type, perms in permissions.items() %}
-{% if perms %}
-/**
- * Type for {{ object_type }} permissions
- */
-export type {{ object_type|capitalize }}Permission = {% for perm in perms %}"{{ perm }}"{% if not loop.last %} | {% endif %}{% endfor %};
+export type ResourcePermission = 
+{% for object_type in object_types %}
+{% if permissions.get(object_type) %}
+  | { resource: "{{ object_type }}"; permission: {% for perm in permissions.get(object_type) %}"{{ perm }}"{% if not loop.last %} | {% endif %}{% endfor %}; resourceId: string | number }
 {% endif %}
-{% endfor %}
-
-/**
- * Type for all resource types
- */
-export type ResourceType = {% for object_type in object_types %}"{{ object_type }}"{% if not loop.last %} | {% endif %}{% endfor %};
+{% endfor %};
