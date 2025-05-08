@@ -7,7 +7,7 @@
  * Type representing all valid resource-permission combinations
  * from the SpiceDB schema.
  */
-export type ResourcePermission = 
+export type ResourcePermission =
   | { resource: "user"; permission: "read" | "update" | "make_admin" | "revoke_admin"; resourceId: string | number }
   | { resource: "group"; permission: "edit_members"; resourceId: string | number }
   | { resource: "organization"; permission: "administrate" | "read"; resourceId: string | number }
