@@ -329,6 +329,83 @@ def test_cli_invalid_output_mapping(mocker):
     mocks["mock_stderr"].write.assert_called()
 
 
+def test_cli_with_inferred_template_py(mocker):
+    """Test that the CLI infers the template for .py files correctly."""
+    # Setup test environment with a .py file without explicit template
+    args = [
+        "check-schema",
+        f"--schema={FIXTURES_DIR / 'valid_schema.zed'}",
+        "--outputs",
+        "resources.py",  # No explicit template
+    ]
+    mocks = setup_cli_test(mocker, args=args, has_diff=False)
+
+    # Run the test
+    result = main()
+
+    # Assertions
+    assert result == 0
+    mocks["mock_stderr"].write.assert_not_called()
+
+
+def test_cli_with_inferred_template_ts(mocker):
+    """Test that the CLI infers the template for .ts files correctly."""
+    # Setup test environment with a .ts file without explicit template
+    args = [
+        "check-schema",
+        f"--schema={FIXTURES_DIR / 'valid_schema.zed'}",
+        "--outputs",
+        "resources.ts",  # No explicit template
+    ]
+    mocks = setup_cli_test(mocker, args=args, has_diff=False)
+
+    # Run the test
+    result = main()
+
+    # Assertions
+    assert result == 0
+    mocks["mock_stderr"].write.assert_not_called()
+
+
+def test_cli_with_mixed_templates(mocker):
+    """Test that the CLI handles a mix of explicit and inferred templates correctly."""
+    # Setup test environment with both explicit and inferred templates
+    args = [
+        "check-schema",
+        f"--schema={FIXTURES_DIR / 'valid_schema.zed'}",
+        "--outputs",
+        "resources.py:types.py.jinja",  # Explicit template
+        "resources.ts",  # Inferred template
+    ]
+    mocks = setup_cli_test(mocker, args=args, has_diff=False)
+
+    # Run the test
+    result = main()
+
+    # Assertions
+    assert result == 0
+    mocks["mock_stderr"].write.assert_not_called()
+
+
+def test_cli_with_unsupported_extension(mocker):
+    """Test that the CLI handles unsupported file extensions correctly."""
+    # Setup test environment with an unsupported file extension
+    args = [
+        "check-schema",
+        f"--schema={FIXTURES_DIR / 'valid_schema.zed'}",
+        "--outputs",
+        "resources.unsupported",  # Unsupported extension
+    ]
+    mocks = setup_cli_test(mocker, args=args)
+
+    # Run the test
+    result = main()
+
+    # Assertions
+    assert result == 1
+    mocks["mock_stderr"].write.assert_called()
+
+
 def test_cli_template_not_found(mocker):
     """Test that the CLI handles template not found correctly."""
     # Setup test environment with nonexistent template

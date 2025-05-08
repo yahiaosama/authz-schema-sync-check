@@ -171,7 +171,8 @@ def parse_output_mappings(
     Parse output mappings from command line arguments.
 
     Args:
-        mappings: List of mapping strings in format 'output_path:template_name'
+        mappings: List of mapping strings in format 'output_path[:template_name]'
+                 If template_name is not provided, it will be inferred from the file extension
 
     Returns:
         Tuple of (valid_mappings, invalid_mappings)
@@ -180,16 +181,34 @@ def parse_output_mappings(
     invalid_mappings: List[InvalidMapping] = []
 
     for mapping in mappings:
-        try:
-            output_path, template_name = mapping.split(":", 1)
-            valid_mappings.append((Path(output_path), template_name))
-        except ValueError:
-            invalid_mappings.append(
-                {
-                    "mapping": mapping,
-                    "reason": "Invalid format. Should be 'output_path:template_name'",
-                }
-            )
+        if ":" in mapping:
+            # Explicit template specified
+            try:
+                output_path_str, template_name = mapping.split(":", 1)
+                valid_mappings.append((Path(output_path_str), template_name))
+            except ValueError:
+                invalid_mappings.append(
+                    {
+                        "mapping": mapping,
+                        "reason": "Invalid format. Should be 'output_path[:template_name]'",
+                    }
+                )
+        else:
+            # No template specified, infer from file extension
+            path_obj = Path(mapping)
+            if path_obj.suffix == ".py":
+                template_name = "default_types.py.jinja"
+                valid_mappings.append((path_obj, template_name))
+            elif path_obj.suffix == ".ts":
+                template_name = "default_types.ts.jinja"
+                valid_mappings.append((path_obj, template_name))
+            else:
+                invalid_mappings.append(
+                    {
+                        "mapping": mapping,
+                        "reason": "Cannot infer template from file extension. Please specify template explicitly.",
+                    }
+                )
 
     return valid_mappings, invalid_mappings
 
@@ -273,7 +292,10 @@ def main():
         "--outputs",
         type=str,
         nargs="+",
-        help="Output mappings in format 'output_path:template_name'",
+        help="Output paths, optionally with template names in format 'output_path[:template_name]'. "
+        "For .py files, the default template is default_types.py.jinja. "
+        "For .ts files, the default template is default_types.ts.jinja. "
+        "For other file types, you must specify the template explicitly.",
         required=True,
     )
     parser.add_argument(

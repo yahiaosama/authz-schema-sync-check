@@ -32,8 +32,8 @@ repos:
         args: [
           "--schema", "backend/app/infra/authz/schema.zed",
           "--outputs", 
-            "backend/app/infra/authz/resources.py:types.py.jinja", 
-            "frontend-apps/packages/shared/src/authz/resources.ts:types.ts.jinja",
+            "backend/app/infra/authz/resources.py", 
+            "frontend-apps/packages/shared/src/authz/resources.ts",
           "--verbose",
           "--colorized-diff=true",
           "--auto-fix"
@@ -44,7 +44,10 @@ repos:
 
 Available options:
 - `--schema`: Path to the schema.zed file (default: `schema.zed`)
-- `--outputs`: Output mappings in format 'output_path:template_name' (required)
+- `--outputs`: Output paths, optionally with template names in format 'output_path[:template_name]' (required)
+  - For `.py` files, the default template is `default_types.py.jinja`
+  - For `.ts` files, the default template is `default_types.ts.jinja`
+  - For other file types, you must specify the template explicitly
 - `--auto-fix`: Automatically apply changes if out of sync
 - `--verbose`: Enable verbose output
 - `--colorized-diff`: Enable or disable colorized diff output (true/false, default: true)
@@ -61,28 +64,36 @@ The `files` pattern determines when the hook runs. In the example above, it will
 You can also use the package as a command-line tool:
 
 ```bash
-# Generate a single output
-poetry run authz-schema-sync-check --schema path/to/schema.zed --outputs "path/to/resources.py:types.py.jinja"
+# Generate a single output with default template (inferred from file extension)
+poetry run authz-schema-sync-check --schema path/to/schema.zed --outputs "path/to/resources.py"
 
-# Generate multiple outputs
+# Generate multiple outputs with default templates
+poetry run authz-schema-sync-check --schema path/to/schema.zed --outputs \
+  "path/to/resources.py" \
+  "path/to/resources.ts"
+
+# Generate outputs with explicit templates
 poetry run authz-schema-sync-check --schema path/to/schema.zed --outputs \
   "path/to/resources.py:types.py.jinja" \
   "path/to/resources.ts:types.ts.jinja"
 
 # Automatically apply changes
 poetry run authz-schema-sync-check --schema path/to/schema.zed --outputs \
-  "path/to/resources.py:types.py.jinja" \
+  "path/to/resources.py" \
   --auto-fix
 
 # Check with colorized diff disabled
 poetry run authz-schema-sync-check --schema path/to/schema.zed --outputs \
-  "path/to/resources.py:types.py.jinja" \
+  "path/to/resources.py" \
   --colorized-diff=false
 ```
 
 Options:
 - `--schema`: Path to the schema.zed file (default: `schema.zed`)
-- `--outputs`: Output mappings in format 'output_path:template_name' (required)
+- `--outputs`: Output paths, optionally with template names in format 'output_path[:template_name]' (required)
+  - For `.py` files, the default template is `default_types.py.jinja`
+  - For `.ts` files, the default template is `default_types.ts.jinja`
+  - For other file types, you must specify the template explicitly
 - `--auto-fix`: Automatically apply changes if out of sync
 - `--verbose`: Enable verbose output
 - `--colorized-diff`: Enable or disable colorized diff output (true/false, default: true)
@@ -431,7 +442,7 @@ Error processing path/to/resources.py: Output file does not exist
 This means the output file doesn't exist yet. Run the hook with `--auto-fix` to create it:
 
 ```bash
-poetry run authz-schema-sync-check --schema path/to/schema.zed --outputs "path/to/resources.py:types.py.jinja" --auto-fix
+poetry run authz-schema-sync-check --schema path/to/schema.zed --outputs "path/to/resources.py" --auto-fix
 ```
 
 The hook will create the file but still fail with an error like:
@@ -454,7 +465,7 @@ Error processing path/to/resources.py: File is out of sync with schema
 This means you've modified the schema.zed file but haven't updated the output file. Run the hook with `--auto-fix` to update it:
 
 ```bash
-poetry run authz-schema-sync-check --schema path/to/schema.zed --outputs "path/to/resources.py:types.py.jinja" --auto-fix
+poetry run authz-schema-sync-check --schema path/to/schema.zed --outputs "path/to/resources.py" --auto-fix
 ```
 
 Then review the changes and commit them.
