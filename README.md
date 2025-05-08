@@ -4,7 +4,7 @@ A pre-commit hook for generating and syncing type definitions from SpiceDB schem
 
 ## Overview
 
-This package provides a pre-commit hook that generates type definitions from a SpiceDB schema file (`schema.zed`) and ensures they are in sync with a Python resources file (`resources.py`). It uses Git to compare the generated code with the existing code and can automatically apply changes.
+This package provides a pre-commit hook that generates type definitions from a SpiceDB schema file (`schema.zed`) and ensures they are in sync with output files. It supports generating both Python and TypeScript type definitions, and can be extended to support other languages through custom templates. It uses Git to compare the generated code with the existing code and can automatically apply changes.
 
 ## Installation
 
@@ -26,23 +26,25 @@ Add the following to your `.pre-commit-config.yaml` file to use it exactly as in
 ```yaml
 repos:
   - repo: https://github.com/yahiaosama/authz-schema-sync-check
-    rev: v0.1.0
+    rev: v0.2.0
     hooks:
       - id: authz-schema-sync-check
         args: [
           "--schema", "backend/app/infra/authz/schema.zed",
-          "--output", "backend/app/infra/authz/resources.py",
+          "--outputs", 
+            "backend/app/infra/authz/resources.py:types.py.jinja", 
+            "frontend-apps/packages/shared/src/authz/resources.ts:types.ts.jinja",
           "--verbose",
           "--colorized-diff=true",
           "--auto-fix"
         ]
-        files: 'backend/app/infra/authz/schema\.zed$|backend/app/infra/authz/resources\.py$'
+        files: 'backend/app/infra/authz/schema\.zed$|backend/app/infra/authz/resources\.py$|frontend-apps/packages/shared/src/authz/resources\.ts$'
         pass_filenames: false
 ```
 
 Available options:
 - `--schema`: Path to the schema.zed file (default: `schema.zed`)
-- `--output`: Path to the output resources.py file (default: `resources.py`)
+- `--outputs`: Output mappings in format 'output_path:template_name' (required)
 - `--auto-fix`: Automatically apply changes if out of sync
 - `--verbose`: Enable verbose output
 - `--colorized-diff`: Enable or disable colorized diff output (true/false, default: true)
@@ -50,34 +52,53 @@ Available options:
 The `files` pattern determines when the hook runs. In the example above, it will run whenever:
 - The `schema.zed` file is modified
 - The `resources.py` file is modified
+- The `resources.ts` file is modified
 
-**Important Note**: The hook will fail if the output file doesn't exist, even with `--auto-fix` enabled. With `--auto-fix`, it will create the file but still fail, requiring you to review and commit the newly created file in a separate step. This ensures that generated files are always explicitly committed.
+**Important Note**: The hook will fail if any output file doesn't exist, even with `--auto-fix` enabled. With `--auto-fix`, it will create the file but still fail, requiring you to review and commit the newly created file in a separate step. This is an intentional security feature to ensure that generated files are always explicitly committed by the user, preventing accidental inclusion of unreviewed generated code.
 
 ### As a Command-line Tool
 
 You can also use the package as a command-line tool:
 
 ```bash
-# Check if files are in sync
-poetry run authz-schema-sync-check --schema path/to/schema.zed --output path/to/resources.py
+# Generate a single output
+poetry run authz-schema-sync-check --schema path/to/schema.zed --outputs "path/to/resources.py:types.py.jinja"
+
+# Generate multiple outputs
+poetry run authz-schema-sync-check --schema path/to/schema.zed --outputs \
+  "path/to/resources.py:types.py.jinja" \
+  "path/to/resources.ts:types.ts.jinja"
 
 # Automatically apply changes
-poetry run authz-schema-sync-check --schema path/to/schema.zed --output path/to/resources.py --auto-fix
+poetry run authz-schema-sync-check --schema path/to/schema.zed --outputs \
+  "path/to/resources.py:types.py.jinja" \
+  --auto-fix
 
 # Check with colorized diff disabled
-poetry run authz-schema-sync-check --schema path/to/schema.zed --output path/to/resources.py --colorized-diff=false
+poetry run authz-schema-sync-check --schema path/to/schema.zed --outputs \
+  "path/to/resources.py:types.py.jinja" \
+  --colorized-diff=false
 ```
 
 Options:
 - `--schema`: Path to the schema.zed file (default: `schema.zed`)
-- `--output`: Path to the output resources.py file (default: `resources.py`)
+- `--outputs`: Output mappings in format 'output_path:template_name' (required)
 - `--auto-fix`: Automatically apply changes if out of sync
 - `--verbose`: Enable verbose output
 - `--colorized-diff`: Enable or disable colorized diff output (true/false, default: true)
 
 ## Generated Type Definitions
 
-The package generates the following type definitions based on the schema:
+The package can generate type definitions in multiple languages based on the schema. The available templates are:
+
+- `types.py.jinja`: Generates Python type definitions
+- `types.ts.jinja`: Generates TypeScript type definitions
+
+You can also create your own templates in the `templates` directory.
+
+### Python Type Definitions
+
+The Python template generates the following:
 
 1. **Resource Classes**: Classes for each object type defined in the schema.
 2. **Permission Literals**: Type literals for permissions specific to each resource type.
@@ -116,7 +137,7 @@ definition organization {
 }
 ```
 
-#### Generated resources.py
+#### Generated Python Output (resources.py)
 
 ```python
 """
@@ -334,6 +355,60 @@ def on_resource(resource: T) -> ResourceCheck[T]:
 poetry run pytest
 ```
 
+### TypeScript Type Definitions
+
+The TypeScript template generates a discriminated union type that represents all valid resource-permission combinations from the schema.
+
+#### Generated TypeScript Output (resources.ts)
+
+```typescript
+/**
+ * GENERATED CODE - DO NOT EDIT MANUALLY
+ * This file is generated from schema.zed and should not be modified directly.
+ */
+
+/**
+ * Type representing all valid resource-permission combinations
+ * from the SpiceDB schema.
+ */
+export type ResourcePermission =
+  | { resource: "user"; permission: "read" | "update" | "make_admin" | "revoke_admin" }
+  | { resource: "group"; permission: "edit_members" }
+  | { resource: "organization"; permission: "administrate" | "read" };
+
+/**
+ * Type for user permissions
+ */
+export type UserPermission = "read" | "update" | "make_admin" | "revoke_admin";
+
+/**
+ * Type for group permissions
+ */
+export type GroupPermission = "edit_members";
+
+/**
+ * Type for organization permissions
+ */
+export type OrganizationPermission = "administrate" | "read";
+
+/**
+ * Type for all resource types
+ */
+export type ResourceType = "user" | "group" | "organization";
+```
+
+This TypeScript type ensures that only valid resource-permission combinations can be used at compile time. For example:
+
+```typescript
+// Valid combinations
+const valid1: ResourcePermission = { resource: "user", permission: "read" };
+const valid2: ResourcePermission = { resource: "organization", permission: "administrate" };
+
+// Invalid combinations - TypeScript error
+const invalid1: ResourcePermission = { resource: "user", permission: "administrate" }; // Error
+const invalid2: ResourcePermission = { resource: "invalid", permission: "read" }; // Error
+```
+
 ## Troubleshooting
 
 ### Missing Output File
@@ -341,32 +416,49 @@ poetry run pytest
 If you see an error like:
 
 ```
-Error: Output file 'path/to/resources.py' does not exist
+Error processing path/to/resources.py: Output file does not exist
 ```
 
-This means the resources.py file doesn't exist yet. Run the hook with `--auto-fix` to create it:
+This means the output file doesn't exist yet. Run the hook with `--auto-fix` to create it:
 
 ```bash
-poetry run authz-schema-sync-check --schema path/to/schema.zed --output path/to/resources.py --auto-fix
+poetry run authz-schema-sync-check --schema path/to/schema.zed --outputs "path/to/resources.py:types.py.jinja" --auto-fix
 ```
 
-Then review the generated file and commit it.
+The hook will create the file but still fail with an error like:
+
+```
+Error processing path/to/resources.py: Output file did not exist but has been created
+Please review and commit the newly created file: path/to/resources.py
+```
+
+This is intentional - you need to review the generated file and commit it manually. This ensures that generated files are always explicitly reviewed before being committed.
 
 ### Files Out of Sync
 
 If you see an error like:
 
 ```
-Error: resources.py is out of sync with schema.zed
+Error processing path/to/resources.py: File is out of sync with schema
 ```
 
-This means you've modified the schema.zed file but haven't updated resources.py. Run the hook with `--auto-fix` to update it:
+This means you've modified the schema.zed file but haven't updated the output file. Run the hook with `--auto-fix` to update it:
 
 ```bash
-poetry run authz-schema-sync-check --schema path/to/schema.zed --output path/to/resources.py --auto-fix
+poetry run authz-schema-sync-check --schema path/to/schema.zed --outputs "path/to/resources.py:types.py.jinja" --auto-fix
 ```
 
 Then review the changes and commit them.
+
+### Template Not Found
+
+If you see an error like:
+
+```
+Error processing path/to/resources.py: Template 'nonexistent.jinja' not found
+```
+
+This means the specified template doesn't exist. Make sure the template exists in the `templates` directory.
 
 ## License
 

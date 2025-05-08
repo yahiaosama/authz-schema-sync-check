@@ -1,6 +1,6 @@
 [project]
 name = "authz-schema-sync-check"
-version = "0.1.0"
+version = "0.2.0"
 description = "A pre-commit hook for checking and syncing authz schema"
 authors = [
     {name = "Yahia Mahmoud",email = "yahia.mahmoud@tacto.ai"}

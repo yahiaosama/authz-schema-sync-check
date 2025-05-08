@@ -1,6 +1,6 @@
 - id: authz-schema-sync-check
   name: Check SpiceDB schema and resources sync
-  description: Validates that resources.py is in sync with schema.zed
+  description: Validates that output files are in sync with schema.zed
   entry: authz-schema-sync-check
   language: python
-  files: '\.zed$|resources\.py$'
+  files: '\.zed$|\.py$|\.ts$'
