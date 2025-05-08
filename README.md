@@ -368,13 +368,18 @@ The TypeScript template generates a discriminated union type that represents all
  */
 
 /**
+ * Type for resource IDs, which can be either strings or numbers
+ */
+export type ResourceId = string | number;
+
+/**
  * Type representing all valid resource-permission combinations
  * from the SpiceDB schema.
  */
 export type ResourcePermission =
-  | { resource: "user"; permission: "read" | "update" | "make_admin" | "revoke_admin" }
-  | { resource: "group"; permission: "edit_members" }
-  | { resource: "organization"; permission: "administrate" | "read" };
+  | { resource: "user"; permission: "read" | "update" | "make_admin" | "revoke_admin"; resourceId: ResourceId }
+  | { resource: "group"; permission: "edit_members"; resourceId: ResourceId }
+  | { resource: "organization"; permission: "administrate" | "read"; resourceId: ResourceId };
 
 /**
  * Type for user permissions
@@ -401,12 +406,12 @@ This TypeScript type ensures that only valid resource-permission combinations ca
 
 ```typescript
 // Valid combinations
-const valid1: ResourcePermission = { resource: "user", permission: "read" };
-const valid2: ResourcePermission = { resource: "organization", permission: "administrate" };
+const valid1: ResourcePermission = { resource: "user", permission: "read", resourceId: "user-123" };
+const valid2: ResourcePermission = { resource: "organization", permission: "administrate", resourceId: 456 };
 
 // Invalid combinations - TypeScript error
-const invalid1: ResourcePermission = { resource: "user", permission: "administrate" }; // Error
-const invalid2: ResourcePermission = { resource: "invalid", permission: "read" }; // Error
+const invalid1: ResourcePermission = { resource: "user", permission: "administrate", resourceId: "user-123" }; // Error
+const invalid2: ResourcePermission = { resource: "invalid", permission: "read", resourceId: 789 }; // Error
 ```
 
 ## Troubleshooting
