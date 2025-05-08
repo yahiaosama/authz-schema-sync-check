@@ -54,9 +54,11 @@ def test_generate_code_typescript():
     ts_code = generator.generate_code("types.ts.jinja")
 
     # Check that the generated code includes expected elements
-    assert "export type ResourceId = string | number;" in ts_code
-    assert "export type ResourcePermission =" in ts_code
-    assert "resourceId: ResourceId" in ts_code
+    assert "type ResourcePermissionDefinition =" in ts_code
+    assert (
+        "export type ResourcePermission = ResourcePermissionDefinition & {" in ts_code
+    )
+    assert "resourceId: string | number;" in ts_code
     assert "export type UserPermission =" in ts_code
     assert "export type GroupPermission =" in ts_code
     assert "export type OrganizationPermission =" in ts_code
@@ -88,9 +90,12 @@ def test_write_code(tmp_path):
     assert ts_output_path.exists()
     ts_content = ts_output_path.read_text()
     assert "GENERATED CODE - DO NOT EDIT MANUALLY" in ts_content
-    assert "export type ResourceId = string | number;" in ts_content
-    assert "export type ResourcePermission =" in ts_content
-    assert "resourceId: ResourceId" in ts_content
+    assert "type ResourcePermissionDefinition =" in ts_content
+    assert (
+        "export type ResourcePermission = ResourcePermissionDefinition & {"
+        in ts_content
+    )
+    assert "resourceId: string | number;" in ts_content
 
 
 def test_format_with_ruff():

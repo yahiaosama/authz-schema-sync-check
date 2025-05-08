@@ -4,20 +4,24 @@
  */
 
 /**
- * Type for resource IDs, which can be either strings or numbers
+ * Base type defining all valid resource and permission combinations
+ * extracted from the SpiceDB schema. This is used as the foundation
+ * for the ResourcePermission type.
  */
-export type ResourceId = string | number;
+type ResourcePermissionDefinition = 
+{% for object_type in object_types %}
+{% if permissions.get(object_type) %}
+  | { resource: "{{ object_type }}"; permission: {% for perm in permissions.get(object_type) %}"{{ perm }}"{% if not loop.last %} | {% endif %}{% endfor %} }
+{% endif %}
+{% endfor %};
 
 /**
  * Type representing all valid resource-permission combinations
  * from the SpiceDB schema.
  */
-export type ResourcePermission =
-{% for object_type in object_types %}
-{% if permissions.get(object_type) %}
-  | { resource: "{{ object_type }}"; permission: {% for perm in permissions.get(object_type) %}"{{ perm }}"{% if not loop.last %} | {% endif %}{% endfor %}; resourceId: ResourceId }
-{% endif %}
-{% endfor %};
+export type ResourcePermission = ResourcePermissionDefinition & {
+  resourceId: string | number;
+};
 
 {% for object_type, perms in permissions.items() %}
 {% if perms %}

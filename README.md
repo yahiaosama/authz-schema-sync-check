@@ -368,18 +368,22 @@ The TypeScript template generates a discriminated union type that represents all
  */
 
 /**
- * Type for resource IDs, which can be either strings or numbers
+ * Base type defining all valid resource and permission combinations
+ * extracted from the SpiceDB schema. This is used as the foundation
+ * for the ResourcePermission type.
  */
-export type ResourceId = string | number;
+type ResourcePermissionDefinition = 
+  | { resource: "user"; permission: "read" | "update" | "make_admin" | "revoke_admin" }
+  | { resource: "group"; permission: "edit_members" }
+  | { resource: "organization"; permission: "administrate" | "read" };
 
 /**
  * Type representing all valid resource-permission combinations
  * from the SpiceDB schema.
  */
-export type ResourcePermission =
-  | { resource: "user"; permission: "read" | "update" | "make_admin" | "revoke_admin"; resourceId: ResourceId }
-  | { resource: "group"; permission: "edit_members"; resourceId: ResourceId }
-  | { resource: "organization"; permission: "administrate" | "read"; resourceId: ResourceId };
+export type ResourcePermission = ResourcePermissionDefinition & {
+  resourceId: string | number;
+};
 
 /**
  * Type for user permissions
