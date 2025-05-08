@@ -25,8 +25,8 @@ def get_diff(file_path: Path, content: str) -> Tuple[bool, str]:
     existing_content = file_path.read_text()
 
     # Generate unified diff
-    existing_lines = existing_content.splitlines(keepends=False)
-    new_lines = content.splitlines(keepends=False)
+    existing_lines = existing_content.splitlines(keepends=True)
+    new_lines = content.splitlines(keepends=True)
 
     diff = difflib.unified_diff(
         existing_lines,
