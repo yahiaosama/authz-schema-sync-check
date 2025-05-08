@@ -12,4 +12,4 @@ export type ResourcePermission =
 {% if permissions.get(object_type) %}
   | { resource: "{{ object_type }}"; permission: {% for perm in permissions.get(object_type) %}"{{ perm }}"{% if not loop.last %} | {% endif %}{% endfor %}; resourceId: string | number }
 {% endif %}
-{% endfor %};
+{% endfor %};{{'\n'}}
