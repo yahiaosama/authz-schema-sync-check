@@ -22,8 +22,9 @@ class CheckRequest(NamedTuple):
     context: Context = None
 
 
-# Type variable for permissions
-P = TypeVar("P")
+# Type variables for permissions
+P = TypeVar("P")  # For resource permissions
+S = TypeVar("S")  # For subject permissions
 
 
 # Base resource class
@@ -145,15 +146,15 @@ class TableView(Resource[Literal["view", "edit"]]):
 
 
 # DSL implementation
-class ResourceCheck(Generic[P]):
+class ResourceCheck(Generic[P, S]):
     """First step in the permission check chain."""
 
     def __init__(self, resource: Resource[P]):
         self.resource = resource
 
     def check_that(
-        self, subject: Resource, *, subject_relation: str | None = None
-    ) -> "SubjectCheck[P]":
+        self, subject: Resource[S], *, subject_relation: str | None = None
+    ) -> "SubjectCheck[P, S]":
         """
         Check that the subject has permissions on the resource.
 
@@ -167,11 +168,11 @@ class ResourceCheck(Generic[P]):
         return SubjectCheck(self.resource, subject, subject_relation)
 
 
-class SubjectCheck(Generic[P]):
+class SubjectCheck(Generic[P, S]):
     """Second step in the permission check chain."""
 
     def __init__(
-        self, resource: Resource[P], subject: Resource, subject_relation: str | None
+        self, resource: Resource[P], subject: Resource[S], subject_relation: str | None
     ):
         self.resource = resource
         self.subject = subject
@@ -199,7 +200,7 @@ class SubjectCheck(Generic[P]):
         )
 
 
-def on_resource(resource: Resource[P]) -> ResourceCheck[P]:
+def on_resource(resource: Resource[P]) -> ResourceCheck[P, S]:
     """
     Start a permission check chain for the specified resource.
 
