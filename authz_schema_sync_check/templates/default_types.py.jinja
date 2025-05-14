@@ -19,6 +19,15 @@ class CheckRequest(NamedTuple):
     resource_id: ResourceId
     context: Context = None
 
+# Permission type aliases for each resource type
+{% for object_type, perms in permissions.items() %}
+{% if perms %}
+{{ object_type|to_camel_case }}Permission = Literal[{% for perm in perms %}"{{ perm }}"{% if not loop.last %}, {% endif %}{% endfor %}]
+{% else %}
+{{ object_type|to_camel_case }}Permission = str
+{% endif %}
+{% endfor %}
+
 # Type variables for permissions
 P = TypeVar('P')  # For resource permissions
 S = TypeVar('S')  # For subject permissions
@@ -32,16 +41,14 @@ class Resource(Generic[P]):
 
 # Resource classes with their specific permission types
 {% for object_type in object_types %}
-class {{ object_type|to_camel_case }}(Resource[
-    {% if permissions.get(object_type) %}Literal[{% for perm in permissions.get(object_type) %}"{{ perm }}"{% if not loop.last %}, {% endif %}{% endfor %}]{% else %}str{% endif %}
-]):
+class {{ object_type|to_camel_case }}(Resource[{{ object_type|to_camel_case }}Permission]):
     """{{ object_type|to_camel_case }} resource from schema.zed"""
     def __init__(self, id: ResourceId):
         super().__init__(id, "{{ object_type }}")
 {% endfor %}
 
 # DSL implementation
-class ResourceCheck(Generic[P, S]):
+class ResourceCheck(Generic[P]):
     """First step in the permission check chain."""
     def __init__(self, resource: Resource[P]):
         self.resource = resource
@@ -87,7 +94,7 @@ class SubjectCheck(Generic[P, S]):
             context=context
         )
 
-def on_resource(resource: Resource[P]) -> ResourceCheck[P, S]:
+def on_resource(resource: Resource[P]) -> ResourceCheck[P]:
     """
     Start a permission check chain for the specified resource.
     

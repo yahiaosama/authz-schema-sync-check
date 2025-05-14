@@ -172,8 +172,14 @@ class CheckRequest(NamedTuple):
     resource_id: ResourceId
     context: Context = None
 
-# Type variable for permissions
-P = TypeVar('P')
+# Permission type aliases for each resource type
+UserPermission = Literal["read", "update", "make_admin", "revoke_admin"]
+GroupPermission = Literal["edit_members"]
+OrganizationPermission = Literal["administrate", "read"]
+
+# Type variables for permissions
+P = TypeVar('P')  # For resource permissions
+S = TypeVar('S')  # For subject permissions
 
 # Base resource class
 class Resource(Generic[P]):
@@ -183,17 +189,17 @@ class Resource(Generic[P]):
         self.type = resource_type
 
 # Resource classes with their specific permission types
-class User(Resource[Literal["read", "update", "make_admin", "revoke_admin"]]):
+class User(Resource[UserPermission]):
     """User resource from schema.zed"""
     def __init__(self, id: ResourceId):
         super().__init__(id, "user")
 
-class Group(Resource[Literal["edit_members"]]):
+class Group(Resource[GroupPermission]):
     """Group resource from schema.zed"""
     def __init__(self, id: ResourceId):
         super().__init__(id, "group")
 
-class Organization(Resource[Literal["administrate", "read"]]):
+class Organization(Resource[OrganizationPermission]):
     """Organization resource from schema.zed"""
     def __init__(self, id: ResourceId):
         super().__init__(id, "organization")
@@ -207,7 +213,7 @@ class ResourceCheck(Generic[P]):
     def __init__(self, resource: Resource[P]):
         self.resource = resource
     
-    def check_that(self, subject: Resource, *, subject_relation: str | None = None) -> "SubjectCheck[P]":
+    def check_that(self, subject: Resource[S], *, subject_relation: str | None = None) -> "SubjectCheck[P, S]":
         """
         Check that the subject has permissions on the resource.
         
@@ -220,9 +226,9 @@ class ResourceCheck(Generic[P]):
         """
         return SubjectCheck(self.resource, subject, subject_relation)
 
-class SubjectCheck(Generic[P]):
+class SubjectCheck(Generic[P, S]):
     """Second step in the permission check chain."""
-    def __init__(self, resource: Resource[P], subject: Resource, subject_relation: str | None):
+    def __init__(self, resource: Resource[P], subject: Resource[S], subject_relation: str | None):
         self.resource = resource
         self.subject = subject
         self.subject_relation = subject_relation

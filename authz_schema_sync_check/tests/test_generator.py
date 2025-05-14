@@ -47,10 +47,17 @@ def test_generate_code_python():
     assert "class Group(Resource[" in py_code
     assert "class Organization(Resource[" in py_code
 
-    # Check for the permission literals in the class definitions
-    assert 'Literal["read", "update", "make_admin", "revoke_admin"]' in py_code
-    assert 'Literal["edit_members"]' in py_code
-    assert 'Literal["administrate", "read"]' in py_code
+    # Check for the permission type aliases
+    assert "UserPermission = Literal" in py_code
+    assert "GroupPermission = Literal" in py_code
+    assert "OrganizationPermission = Literal" in py_code
+    assert "TableViewPermission = Literal" in py_code
+
+    # Check that classes use these aliases
+    assert "class User(Resource[UserPermission])" in py_code
+    assert "class Group(Resource[GroupPermission])" in py_code
+    assert "class Organization(Resource[OrganizationPermission])" in py_code
+    assert "class TableView(Resource[TableViewPermission])" in py_code
 
     # Check for the camel case conversion of snake_case resource names
     assert "class TableView" in py_code

@@ -22,6 +22,12 @@ class CheckRequest(NamedTuple):
     context: Context = None
 
 
+# Permission type aliases for each resource type
+UserPermission = Literal["read", "update", "make_admin", "revoke_admin"]
+GroupPermission = Literal["edit_members"]
+OrganizationPermission = Literal["administrate", "read"]
+TableViewPermission = Literal["view", "edit"]
+
 # Type variables for permissions
 P = TypeVar("P")  # For resource permissions
 S = TypeVar("S")  # For subject permissions
@@ -37,108 +43,28 @@ class Resource(Generic[P]):
 
 
 # Resource classes with their specific permission types
-class User(Resource[Literal["read", "update", "make_admin", "revoke_admin"]]):
+class User(Resource[UserPermission]):
     """User resource from schema.zed"""
 
     def __init__(self, id: ResourceId):
         super().__init__(id, "user")
 
 
-class Group(Resource[Literal["edit_members"]]):
+class Group(Resource[GroupPermission]):
     """Group resource from schema.zed"""
 
     def __init__(self, id: ResourceId):
         super().__init__(id, "group")
 
 
-class Organization(
-    Resource[
-        Literal[
-            "administrate",
-            "support",
-            "read",
-            "create_users",
-            "view_articles",
-            "edit_articles",
-            "view_requests",
-            "edit_requests",
-            "view_suppliers",
-            "edit_suppliers",
-            "view_table_views",
-            "edit_table_views",
-        ]
-    ]
-):
+class Organization(Resource[OrganizationPermission]):
     """Organization resource from schema.zed"""
 
     def __init__(self, id: ResourceId):
         super().__init__(id, "organization")
 
 
-class Role(
-    Resource[
-        Literal[
-            "edit",
-            "view_articles",
-            "edit_articles",
-            "view_requests",
-            "edit_requests",
-            "view_suppliers",
-            "edit_suppliers",
-            "view_table_views",
-            "edit_table_views",
-        ]
-    ]
-):
-    """Role resource from schema.zed"""
-
-    def __init__(self, id: ResourceId):
-        super().__init__(id, "role")
-
-
-class Policy(
-    Resource[
-        Literal[
-            "use",
-            "view_articles",
-            "edit_articles",
-            "view_requests",
-            "edit_requests",
-            "view_suppliers",
-            "edit_suppliers",
-            "view_table_views",
-            "edit_table_views",
-        ]
-    ]
-):
-    """Policy resource from schema.zed"""
-
-    def __init__(self, id: ResourceId):
-        super().__init__(id, "policy")
-
-
-class Article(Resource[Literal["view", "edit"]]):
-    """Article resource from schema.zed"""
-
-    def __init__(self, id: ResourceId):
-        super().__init__(id, "article")
-
-
-class Request(Resource[Literal["view", "edit"]]):
-    """Request resource from schema.zed"""
-
-    def __init__(self, id: ResourceId):
-        super().__init__(id, "request")
-
-
-class Supplier(Resource[Literal["view", "edit"]]):
-    """Supplier resource from schema.zed"""
-
-    def __init__(self, id: ResourceId):
-        super().__init__(id, "supplier")
-
-
-class TableView(Resource[Literal["view", "edit"]]):
+class TableView(Resource[TableViewPermission]):
     """TableView resource from schema.zed"""
 
     def __init__(self, id: ResourceId):
@@ -146,7 +72,7 @@ class TableView(Resource[Literal["view", "edit"]]):
 
 
 # DSL implementation
-class ResourceCheck(Generic[P, S]):
+class ResourceCheck(Generic[P]):
     """First step in the permission check chain."""
 
     def __init__(self, resource: Resource[P]):
@@ -200,7 +126,7 @@ class SubjectCheck(Generic[P, S]):
         )
 
 
-def on_resource(resource: Resource[P]) -> ResourceCheck[P, S]:
+def on_resource(resource: Resource[P]) -> ResourceCheck[P]:
     """
     Start a permission check chain for the specified resource.
 
