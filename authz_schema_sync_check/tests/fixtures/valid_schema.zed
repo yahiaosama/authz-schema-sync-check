@@ -29,3 +29,10 @@ definition organization {
     permission read = member + administrate
 }
 
+definition table_view {
+    relation organization: organization
+    relation creator: user
+
+    permission view = creator + organization->read
+    permission edit = creator + organization->administrate
+}

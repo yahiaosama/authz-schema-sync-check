@@ -36,11 +36,28 @@ def test_generate_code_python():
     assert "class User" in py_code
     assert "class Group" in py_code
     assert "class Organization" in py_code
-    assert "GroupPermission = Literal" in py_code
-    assert "OrganizationPermission = Literal" in py_code
-    assert "GroupRelation = Literal" in py_code
-    assert "OrganizationRelation = Literal" in py_code
-    assert "T = TypeVar" in py_code
+
+    # Check for the new structure instead of the old type aliases
+    assert "P = TypeVar" in py_code
+    assert "class Resource(Generic[P])" in py_code
+    assert "def __init__(self, id: ResourceId, resource_type: str)" in py_code
+
+    # Check for the simplified class definitions
+    assert "class User(Resource[" in py_code
+    assert "class Group(Resource[" in py_code
+    assert "class Organization(Resource[" in py_code
+
+    # Check for the permission literals in the class definitions
+    assert 'Literal["read", "update", "make_admin", "revoke_admin"]' in py_code
+    assert 'Literal["edit_members"]' in py_code
+    assert 'Literal["administrate", "read"]' in py_code
+
+    # Check for the camel case conversion of snake_case resource names
+    assert "class TableView" in py_code
+    assert "class Table_view" not in py_code  # Make sure it's not using capitalize
+    assert 'Literal["view", "edit"]' in py_code
+    # Ensure the resource_type is still snake_case
+    assert 'super().__init__(id, "table_view")' in py_code
 
 
 def test_generate_code_typescript():
@@ -83,6 +100,22 @@ def test_write_code(tmp_path):
     py_content = py_output_path.read_text()
     assert "GENERATED CODE - DO NOT EDIT MANUALLY" in py_content
     assert "class User" in py_content
+
+    # Check for the new structure
+    assert "P = TypeVar" in py_content
+    assert "class Resource(Generic[P])" in py_content
+    assert "def __init__(self, id: ResourceId, resource_type: str)" in py_content
+
+    # Check for the simplified class definitions
+    assert "class User(Resource[" in py_content
+    assert "class Group(Resource[" in py_content
+    assert "class Organization(Resource[" in py_content
+
+    # Check for the camel case conversion of snake_case resource names
+    assert "class TableView" in py_content
+    assert "class Table_view" not in py_content
+    # Ensure the resource_type is still snake_case
+    assert 'super().__init__(id, "table_view")' in py_content
 
     # Write TypeScript code to a temporary file
     ts_output_path = tmp_path / "resources.ts"

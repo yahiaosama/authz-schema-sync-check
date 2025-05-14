@@ -3,121 +3,101 @@ GENERATED CODE - DO NOT EDIT MANUALLY
 This file is generated from schema.zed and should not be modified directly.
 """
 
-from abc import ABC
-from typing import Literal, TypeVar, Generic, Any, overload, NamedTuple
+from typing import Any, Generic, Literal, NamedTuple, TypeVar
+
+# Type aliases
+ResourceId = str
+Context = dict[str, Any] | None
 
 
 class CheckRequest(NamedTuple):
     """A request to check a permission or relation."""
 
     subject_type: str
-    subject_id: str
+    subject_id: ResourceId
     subject_relation: str | None
-    action: str  # The permission or relation name
+    action: str
     resource_type: str
-    resource_id: str
-    context: dict[str, Any] | None = None
+    resource_id: ResourceId
+    context: Context = None
 
 
-# Permission literals for each resource type
-UserPermission = Literal["read", "update", "make_admin", "revoke_admin"]
-GroupPermission = Literal["edit_members"]
-OrganizationPermission = Literal["administrate", "read"]
-
-# Relation literals for each resource type
-UserRelation = Literal["organization", "self"]
-GroupRelation = Literal["organization", "member"]
-OrganizationRelation = Literal["admin", "member"]
+# Type variable for permissions
+P = TypeVar("P")
 
 
-# Abstract base class for all resources
-class Resource(ABC):
-    """Abstract base class for all resources."""
+# Base resource class
+class Resource(Generic[P]):
+    """Base class for all resources with typed permissions."""
 
-    def __init__(self, id: str, subject_relation: str | None = None):
+    def __init__(self, id: ResourceId, resource_type: str):
         self.id = id
-        self.type = ""  # Will be overridden by subclasses
-        self.subject_relation = subject_relation
+        self.type = resource_type
 
 
-# Resource types from schema
-class User(Resource):
+# Resource classes with their specific permission types
+class User(Resource[Literal["read", "update", "make_admin", "revoke_admin"]]):
     """User resource from schema.zed"""
 
-    def __init__(self, id: str, subject_relation: str | None = None):
-        super().__init__(id, subject_relation)
-        self.type = "user"
+    def __init__(self, id: ResourceId):
+        super().__init__(id, "user")
 
 
-class Group(Resource):
+class Group(Resource[Literal["edit_members"]]):
     """Group resource from schema.zed"""
 
-    def __init__(self, id: str, subject_relation: str | None = None):
-        super().__init__(id, subject_relation)
-        self.type = "group"
+    def __init__(self, id: ResourceId):
+        super().__init__(id, "group")
 
 
-class Organization(Resource):
+class Organization(Resource[Literal["administrate", "read"]]):
     """Organization resource from schema.zed"""
 
-    def __init__(self, id: str, subject_relation: str | None = None):
-        super().__init__(id, subject_relation)
-        self.type = "organization"
+    def __init__(self, id: ResourceId):
+        super().__init__(id, "organization")
 
 
-# Type variable for resources
-T = TypeVar("T", bound=Resource)  # Constrain T to be a subclass of Resource
+class TableView(Resource[Literal["view", "edit"]]):
+    """TableView resource from schema.zed"""
+
+    def __init__(self, id: ResourceId):
+        super().__init__(id, "table_view")
 
 
 # DSL implementation
-class ResourceCheck(Generic[T]):
+class ResourceCheck(Generic[P]):
     """First step in the permission check chain."""
 
-    def __init__(self, resource: T):
+    def __init__(self, resource: Resource[P]):
         self.resource = resource
 
-    def check_that(self, subject: Resource) -> "SubjectCheck[T]":
+    def check_that(
+        self, subject: Resource, *, subject_relation: str | None = None
+    ) -> "SubjectCheck[P]":
         """
         Check that the subject has permissions on the resource.
 
         Args:
             subject: The subject to check permissions for (another resource)
+            subject_relation: The relation of the subject (keyword-only argument)
 
         Returns:
             A SubjectCheck object to continue the permission check chain
         """
-        return SubjectCheck(self.resource, subject)
+        return SubjectCheck(self.resource, subject, subject_relation)
 
 
-class SubjectCheck(Generic[T]):
+class SubjectCheck(Generic[P]):
     """Second step in the permission check chain."""
 
-    def __init__(self, resource: T, subject: Resource):
+    def __init__(
+        self, resource: Resource[P], subject: Resource, subject_relation: str | None
+    ):
         self.resource = resource
         self.subject = subject
+        self.subject_relation = subject_relation
 
-    @overload
-    def can(
-        self: "SubjectCheck[User]",
-        permission: UserPermission,
-        context: dict[str, Any] | None = None,
-    ) -> CheckRequest: ...
-    @overload
-    def can(
-        self: "SubjectCheck[Group]",
-        permission: GroupPermission,
-        context: dict[str, Any] | None = None,
-    ) -> CheckRequest: ...
-    @overload
-    def can(
-        self: "SubjectCheck[Organization]",
-        permission: OrganizationPermission,
-        context: dict[str, Any] | None = None,
-    ) -> CheckRequest: ...
-
-    def can(
-        self, permission: str, context: dict[str, Any] | None = None
-    ) -> CheckRequest:
+    def can(self, permission: P, context: Context = None) -> CheckRequest:
         """
         Create a permission check request.
 
@@ -131,55 +111,15 @@ class SubjectCheck(Generic[T]):
         return CheckRequest(
             subject_type=self.subject.type,
             subject_id=self.subject.id,
-            subject_relation=self.subject.subject_relation,
-            action=permission,
-            resource_type=self.resource.type,
-            resource_id=self.resource.id,
-            context=context,
-        )
-
-    @overload
-    def is_(
-        self: "SubjectCheck[User]",
-        relation: UserRelation,
-        context: dict[str, Any] | None = None,
-    ) -> CheckRequest: ...
-    @overload
-    def is_(
-        self: "SubjectCheck[Group]",
-        relation: GroupRelation,
-        context: dict[str, Any] | None = None,
-    ) -> CheckRequest: ...
-    @overload
-    def is_(
-        self: "SubjectCheck[Organization]",
-        relation: OrganizationRelation,
-        context: dict[str, Any] | None = None,
-    ) -> CheckRequest: ...
-
-    def is_(self, relation: str, context: dict[str, Any] | None = None) -> CheckRequest:
-        """
-        Create a relation check request.
-
-        Args:
-            relation: The relation to check
-            context: Additional context for the relation check (optional)
-
-        Returns:
-            A CheckRequest object
-        """
-        return CheckRequest(
-            subject_type=self.subject.type,
-            subject_id=self.subject.id,
-            subject_relation=self.subject.subject_relation,
-            action=relation,
+            subject_relation=self.subject_relation,
+            action=str(permission),  # Convert to string for the CheckRequest
             resource_type=self.resource.type,
             resource_id=self.resource.id,
             context=context,
         )
 
 
-def on_resource(resource: T) -> ResourceCheck[T]:
+def on_resource(resource: Resource[P]) -> ResourceCheck[P]:
     """
     Start a permission check chain for the specified resource.
 

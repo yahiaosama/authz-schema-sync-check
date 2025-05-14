@@ -5,7 +5,7 @@ Command-line interface for the pre-commit hook.
 import argparse
 import sys
 from pathlib import Path
-from typing import TypedDict
+from typing import Literal, TypedDict
 import colorama
 import jinja2
 
@@ -288,7 +288,7 @@ def report_result(result: ProcessResult, verbose: bool, colorized_diff: bool) ->
             )
 
 
-def main():
+def main() -> Literal[1] | Literal[0]:
     """
     Main entry point for the CLI.
 

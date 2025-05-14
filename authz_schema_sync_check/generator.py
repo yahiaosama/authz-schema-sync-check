@@ -32,6 +32,13 @@ class TypeGenerator:
             lstrip_blocks=True,
         )
 
+        # Add custom filters
+        self.template_env.filters["to_camel_case"] = self._to_camel_case
+
+    def _to_camel_case(self, s: str) -> str:
+        """Convert snake_case to CamelCase."""
+        return "".join(word.capitalize() for word in s.split("_"))
+
     def _format_with_ruff(self, code: str) -> str:
         """
         Format code using ruff via subprocess.
