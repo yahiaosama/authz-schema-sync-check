@@ -37,10 +37,12 @@ def test_generate_code_python():
     assert "class Group" in py_code
     assert "class Organization" in py_code
 
-    # Check for the new structure instead of the old type aliases
+    # Check for the new structure
     assert "P = TypeVar" in py_code
     assert "class Resource(Generic[P])" in py_code
     assert "def __init__(self, id: ResourceId, resource_type: str)" in py_code
+    assert "ResourceId = int | str" in py_code
+    assert "class CheckRequest" not in py_code
 
     # Check for the simplified class definitions
     assert "class User(Resource[" in py_code
@@ -53,11 +55,15 @@ def test_generate_code_python():
     assert "OrganizationPermission = Literal" in py_code
     assert "TableViewPermission = Literal" in py_code
 
-    # Check that classes use these aliases
+    # Check that classes use these aliases and have permission_type
     assert "class User(Resource[UserPermission])" in py_code
     assert "class Group(Resource[GroupPermission])" in py_code
     assert "class Organization(Resource[OrganizationPermission])" in py_code
     assert "class TableView(Resource[TableViewPermission])" in py_code
+    assert "permission_type = UserPermission" in py_code
+    assert "permission_type = GroupPermission" in py_code
+    assert "permission_type = OrganizationPermission" in py_code
+    assert "permission_type = TableViewPermission" in py_code
 
     # Check for the camel case conversion of snake_case resource names
     assert "class TableView" in py_code
@@ -112,6 +118,7 @@ def test_write_code(tmp_path):
     assert "P = TypeVar" in py_content
     assert "class Resource(Generic[P])" in py_content
     assert "def __init__(self, id: ResourceId, resource_type: str)" in py_content
+    assert "ResourceId = int | str" in py_content
 
     # Check for the simplified class definitions
     assert "class User(Resource[" in py_content
@@ -123,6 +130,11 @@ def test_write_code(tmp_path):
     assert "class Table_view" not in py_content
     # Ensure the resource_type is still snake_case
     assert 'super().__init__(id, "table_view")' in py_content
+    # Check for permission_type
+    assert "permission_type = UserPermission" in py_content
+    assert "permission_type = GroupPermission" in py_content
+    assert "permission_type = OrganizationPermission" in py_content
+    assert "permission_type = TableViewPermission" in py_content
 
     # Write TypeScript code to a temporary file
     ts_output_path = tmp_path / "resources.ts"
