@@ -154,7 +154,7 @@ GENERATED CODE - DO NOT EDIT MANUALLY
 This file is generated from schema.zed and should not be modified directly.
 """
 
-from typing import Any, Generic, Literal, TypeVar
+from typing import Generic, Literal, TypeVar
 
 # Permission type aliases for each resource type
 UserPermission = Literal["read", "update", "make_admin", "revoke_admin"]
