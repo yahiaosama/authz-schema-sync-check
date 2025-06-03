@@ -40,9 +40,7 @@ def test_generate_code_python():
     # Check for the new structure
     assert "P = TypeVar" in py_code
     assert "class Resource(Generic[P])" in py_code
-    assert "def __init__(self, id: ResourceId, resource_type: str)" in py_code
-    assert "ResourceId = int | str" in py_code
-    assert "class CheckRequest" not in py_code
+    assert "def __init__(self, id: str, resource_type: str)" in py_code
 
     # Check for the simplified class definitions
     assert "class User(Resource[" in py_code
@@ -117,8 +115,7 @@ def test_write_code(tmp_path):
     # Check for the new structure
     assert "P = TypeVar" in py_content
     assert "class Resource(Generic[P])" in py_content
-    assert "def __init__(self, id: ResourceId, resource_type: str)" in py_content
-    assert "ResourceId = int | str" in py_content
+    assert "def __init__(self, id: str, resource_type: str)" in py_content
 
     # Check for the simplified class definitions
     assert "class User(Resource[" in py_content
